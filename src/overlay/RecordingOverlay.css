@@ -314,6 +314,19 @@
   flex: none;
   animation: sdot-pulse 1.9s infinite;
 }
+
+/* Post-processing mode badge — a two-letter label beside the dot/spinner.
+   Small enough that the pill's fixed widths are untouched. */
+.smode {
+  margin-left: 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  color: var(--s-muted);
+  flex: none;
+  user-select: none;
+}
 @keyframes sdot-pulse {
   0% {
     box-shadow: 0 0 0 0 var(--s-accent-soft);

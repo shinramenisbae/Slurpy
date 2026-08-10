@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import type {
   AppSettings as Settings,
   AudioDevice,
+  PostProcessMode,
   TranscribeAcceleratorSetting,
   OrtAcceleratorSetting,
 } from "@/bindings";
@@ -147,6 +148,20 @@ const settingUpdaters: {
   history_limit: (value) => commands.updateHistoryLimit(value as number),
   post_process_enabled: (value) =>
     commands.changePostProcessEnabledSetting(value as boolean),
+  post_process_mode: (value) =>
+    commands.changePostProcessModeSetting(value as PostProcessMode),
+  cliproxy_base_url: (value) =>
+    commands.changeCliproxyBaseUrlSetting(value as string),
+  cliproxy_model: (value) =>
+    commands.changeCliproxyModelSetting(value as string),
+  cliproxy_api_key: (value) =>
+    commands.changeCliproxyApiKeySetting(value as string),
+  cliproxy_max_tokens: (value) =>
+    commands.changeCliproxyMaxTokensSetting(value as number),
+  cliproxy_timeout_ms: (value) =>
+    commands.changeCliproxyTimeoutMsSetting(value as number),
+  cliproxy_system_prompt: (value) =>
+    commands.changeCliproxySystemPromptSetting(value as string),
   post_process_selected_prompt_id: (value) =>
     commands.setPostProcessSelectedPrompt(value as string),
   mute_while_recording: (value) =>
@@ -610,6 +625,12 @@ export const useSettingsStore = create<SettingsStore>()(
       // Re-fetch settings when the backend changes them (e.g. language
       // reset during model switch). The backend is the source of truth.
       listen("model-state-changed", () => {
+        get().refreshSettings();
+      });
+
+      // Backend-initiated setting changes (e.g. the post-processing mode
+      // cycled via CLI flag or shortcut) must reach the UI immediately.
+      listen("settings-changed", () => {
         get().refreshSettings();
       });
     },
