@@ -7,7 +7,11 @@
     "model": "Model",
     "quit": "Quit",
     "cancel": "Cancel",
-    "secureInputWarning": "⚠ Shortcuts blocked by Secure Input"
+    "secureInputWarning": "⚠ Shortcuts blocked by Secure Input",
+    "postProcessing": "post-processing",
+    "postProcessingOff": "Off",
+    "postProcessingBuiltin": "Builtin",
+    "postProcessingCliproxy": "CLIProxyAPI"
   },
   "sidebar": {
     "general": "General",
@@ -383,8 +387,54 @@
       }
     },
     "postProcessing": {
+      "mode": {
+        "title": "Mode",
+        "label": "Post-processing mode",
+        "description": "Which backend cleans up transcripts dictated with the post-processing hotkey. Off pastes the raw transcript.",
+        "off": "Off",
+        "builtin": "Builtin",
+        "cliproxy": "CLIProxyAPI"
+      },
       "hotkey": {
         "title": "Hotkey"
+      },
+      "cliproxy": {
+        "title": "CLIProxyAPI",
+        "baseUrl": {
+          "title": "Base URL",
+          "description": "Anthropic Messages-compatible endpoint. Plain http is fine for loopback hosts.",
+          "placeholder": "http://127.0.0.1:8317"
+        },
+        "model": {
+          "title": "Model",
+          "description": "Model identifier sent with each request.",
+          "placeholder": "claude-haiku-4-5"
+        },
+        "apiKey": {
+          "title": "API Key",
+          "description": "Sent as-is in the x-api-key header. A placeholder (or empty) value is normal for a local proxy.",
+          "placeholder": "placeholder"
+        },
+        "maxTokens": {
+          "title": "Max Tokens",
+          "description": "max_tokens sent with each request."
+        },
+        "timeoutMs": {
+          "title": "Timeout (ms)",
+          "description": "Hard timeout for the request. On expiry the raw transcript is pasted."
+        },
+        "systemPrompt": {
+          "title": "System Prompt",
+          "description": "Instructions sent as the system prompt with each transcript."
+        },
+        "testConnection": {
+          "title": "Test Connection",
+          "description": "One round trip against the endpoint. Reports latency and the response or the exact error.",
+          "button": "Test connection",
+          "testing": "Testing...",
+          "success": "{{latency}} ms — {{response}}",
+          "failure": "{{latency}} ms — {{error}}"
+        }
       },
       "api": {
         "title": "API (OpenAI Compatible)",
@@ -671,7 +721,11 @@
   },
   "overlay": {
     "transcribing": "Transcribing...",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "mode": {
+      "builtin": "AI",
+      "cliproxy": "CP"
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} may be blocking 1 shortcut",

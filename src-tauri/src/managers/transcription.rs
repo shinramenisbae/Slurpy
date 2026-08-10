@@ -1494,10 +1494,11 @@ impl TranscriptionManager {
 
         let final_result = filtered_result;
 
+        // Log size only — never transcript content.
         if final_result.is_empty() {
             info!("Transcription result is empty");
         } else {
-            info!("Transcription result: {}", final_result);
+            info!("Transcription result: {} chars", final_result.len());
         }
 
         self.maybe_unload_immediately("transcription");

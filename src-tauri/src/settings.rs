@@ -10,6 +10,10 @@ use tauri_plugin_store::StoreExt;
 pub const APPLE_INTELLIGENCE_PROVIDER_ID: &str = "apple_intelligence";
 pub const APPLE_INTELLIGENCE_DEFAULT_MODEL_ID: &str = "Apple Intelligence";
 
+/// Optional shortcut that cycles the post-processing mode. Unbound by default
+/// (empty binding string); unlike every other binding, empty is a valid value.
+pub const CYCLE_POST_PROCESS_MODE_BINDING_ID: &str = "cycle_post_process_mode";
+
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
@@ -91,6 +95,31 @@ pub struct LLMPrompt {
     pub id: String,
     pub name: String,
     pub prompt: String,
+}
+
+/// Which post-processing backend a post-process dictation runs through.
+/// `Off` pastes the raw transcript; `Builtin` is the existing multi-provider
+/// LLM pipeline; `Cliproxy` posts to an Anthropic Messages-compatible endpoint
+/// (see `crate::cliproxy`).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum PostProcessMode {
+    #[default]
+    Off,
+    Builtin,
+    Cliproxy,
+}
+
+impl PostProcessMode {
+    /// Off → Builtin → Cliproxy → Off, for the `--cycle-post-process-mode`
+    /// CLI flag and the optional cycle shortcut.
+    pub fn next(self) -> Self {
+        match self {
+            PostProcessMode::Off => PostProcessMode::Builtin,
+            PostProcessMode::Builtin => PostProcessMode::Cliproxy,
+            PostProcessMode::Cliproxy => PostProcessMode::Off,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Type)]
@@ -329,6 +358,33 @@ impl std::ops::DerefMut for SecretMap {
     }
 }
 
+/// A single secret value stored in settings. Same plaintext storage as
+/// [`SecretMap`] (matching every existing provider key), but redacted in
+/// Debug output so the startup settings dump never contains it.
+#[derive(Clone, Default, Serialize, Deserialize, Type)]
+#[serde(transparent)]
+pub struct SecretString(String);
+
+impl fmt::Debug for SecretString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(if self.0.is_empty() {
+            "\"\""
+        } else {
+            "[REDACTED]"
+        })
+    }
+}
+
+impl SecretString {
+    pub fn new(value: String) -> Self {
+        Self(value)
+    }
+
+    pub fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
 /* still handy for composing the initial JSON in the store ------------- */
 /// The container-level `serde(default)` (backed by the `Default` impl below)
 /// guarantees every field — including ones added in the future — falls back to
@@ -427,6 +483,20 @@ pub struct AppSettings {
     pub post_process_prompts: Vec<LLMPrompt>,
     #[serde(default)]
     pub post_process_selected_prompt_id: Option<String>,
+    #[serde(default)]
+    pub post_process_mode: PostProcessMode,
+    #[serde(default = "default_cliproxy_base_url")]
+    pub cliproxy_base_url: String,
+    #[serde(default = "default_cliproxy_model")]
+    pub cliproxy_model: String,
+    #[serde(default)]
+    pub cliproxy_api_key: SecretString,
+    #[serde(default = "default_cliproxy_max_tokens")]
+    pub cliproxy_max_tokens: u32,
+    #[serde(default = "default_cliproxy_timeout_ms")]
+    pub cliproxy_timeout_ms: u64,
+    #[serde(default = "default_cliproxy_system_prompt")]
+    pub cliproxy_system_prompt: String,
     #[serde(default)]
     pub mute_while_recording: bool,
     #[serde(default)]
@@ -733,6 +803,26 @@ fn default_post_process_prompts() -> Vec<LLMPrompt> {
     }]
 }
 
+fn default_cliproxy_base_url() -> String {
+    "http://127.0.0.1:8317".to_string()
+}
+
+fn default_cliproxy_model() -> String {
+    "claude-haiku-4-5".to_string()
+}
+
+fn default_cliproxy_max_tokens() -> u32 {
+    1024
+}
+
+fn default_cliproxy_timeout_ms() -> u64 {
+    1500
+}
+
+fn default_cliproxy_system_prompt() -> String {
+    "You are a transcription cleanup assistant. The user message is a raw speech-to-text transcript. Return the same text with punctuation, capitalization, and obvious transcription errors fixed. Change nothing else: do not paraphrase, do not add or remove content, do not answer questions that appear in the text, and do not comment on the text. Return only the corrected transcript.".to_string()
+}
+
 fn default_transcribe_gpu_device() -> i32 {
     -1 // auto
 }
@@ -850,6 +940,19 @@ pub fn get_default_settings() -> AppSettings {
             current_binding: "escape".to_string(),
         },
     );
+    bindings.insert(
+        CYCLE_POST_PROCESS_MODE_BINDING_ID.to_string(),
+        ShortcutBinding {
+            id: CYCLE_POST_PROCESS_MODE_BINDING_ID.to_string(),
+            name: "Cycle Post-Processing Mode".to_string(),
+            description: "Cycles post-processing between Off, Builtin, and CLIProxyAPI."
+                .to_string(),
+            // Unbound by default so a fresh install registers no extra global
+            // shortcut; the user can assign one in the post-processing settings.
+            default_binding: String::new(),
+            current_binding: String::new(),
+        },
+    );
 
     AppSettings {
         settings_schema_version: default_settings_schema_version(),
@@ -891,6 +994,13 @@ pub fn get_default_settings() -> AppSettings {
         post_process_models: default_post_process_models(),
         post_process_prompts: default_post_process_prompts(),
         post_process_selected_prompt_id: None,
+        post_process_mode: PostProcessMode::default(),
+        cliproxy_base_url: default_cliproxy_base_url(),
+        cliproxy_model: default_cliproxy_model(),
+        cliproxy_api_key: SecretString::default(),
+        cliproxy_max_tokens: default_cliproxy_max_tokens(),
+        cliproxy_timeout_ms: default_cliproxy_timeout_ms(),
+        cliproxy_system_prompt: default_cliproxy_system_prompt(),
         mute_while_recording: false,
         append_trailing_space: false,
         app_language: default_app_language(),
@@ -922,6 +1032,13 @@ impl Default for AppSettings {
 }
 
 impl AppSettings {
+    /// Whether the post-processing feature is on at all (mode is not Off).
+    /// Gates registration of the `transcribe_with_post_process` shortcut, the
+    /// same way `post_process_enabled` used to.
+    pub fn post_process_active(&self) -> bool {
+        self.post_process_mode != PostProcessMode::Off
+    }
+
     pub fn active_post_process_provider(&self) -> Option<&PostProcessProvider> {
         self.post_process_providers
             .iter()
@@ -1098,6 +1215,34 @@ fn apply_settings_migrations(
         updated = true;
     }
 
+    // One-time post-processing mode migration (only while the new key is
+    // absent): the old on/off `post_process_enabled` bool becomes the
+    // three-state mode. Enabled users land on Builtin — their existing
+    // provider pipeline — never on Off or Cliproxy.
+    if settings_value.get("post_process_mode").is_none() {
+        settings.post_process_mode = if settings.post_process_enabled {
+            PostProcessMode::Builtin
+        } else {
+            PostProcessMode::Off
+        };
+        updated = true;
+    }
+
+    // This build writes `post_process_mode` and the legacy `post_process_enabled`
+    // bool together, so a mismatch means an older build toggled the bool after
+    // the migration above ran. Treat the bool as the newer intent.
+    match (settings.post_process_enabled, settings.post_process_mode) {
+        (true, PostProcessMode::Off) => {
+            settings.post_process_mode = PostProcessMode::Builtin;
+            updated = true;
+        }
+        (false, PostProcessMode::Builtin | PostProcessMode::Cliproxy) => {
+            settings.post_process_mode = PostProcessMode::Off;
+            updated = true;
+        }
+        _ => {}
+    }
+
     updated
 }
 
@@ -1269,8 +1414,83 @@ mod tests {
         assert_eq!(settings.sound_theme, SoundTheme::Pop);
         assert!(settings.filler_word_removal_enabled);
 
-        // A current-format store must not be rewritten on every read.
-        assert!(!apply_settings_migrations(&mut settings, &stored));
+        // A v0.9 store needs exactly one migration pass (post_process_mode is
+        // new); after that the store is current-format and must not be
+        // rewritten on every read.
+        assert!(apply_settings_migrations(&mut settings, &stored));
+        assert_eq!(settings.post_process_mode, PostProcessMode::Off);
+        let migrated = serde_json::to_value(&settings).unwrap();
+        assert!(!apply_settings_migrations(&mut settings, &migrated));
+    }
+
+    #[test]
+    fn post_process_enabled_stores_migrate_to_builtin() {
+        let mut stored = default_settings_json();
+        let map = stored.as_object_mut().unwrap();
+        map.insert("post_process_enabled".into(), serde_json::json!(true));
+        map.remove("post_process_mode");
+
+        let mut settings: AppSettings = serde_json::from_value(stored.clone()).unwrap();
+        assert!(apply_settings_migrations(&mut settings, &stored));
+        assert_eq!(settings.post_process_mode, PostProcessMode::Builtin);
+        assert!(settings.post_process_enabled);
+    }
+
+    #[test]
+    fn post_process_disabled_stores_migrate_to_off() {
+        let mut stored = default_settings_json();
+        let map = stored.as_object_mut().unwrap();
+        map.insert("post_process_enabled".into(), serde_json::json!(false));
+        map.remove("post_process_mode");
+
+        let mut settings: AppSettings = serde_json::from_value(stored.clone()).unwrap();
+        apply_settings_migrations(&mut settings, &stored);
+        assert_eq!(settings.post_process_mode, PostProcessMode::Off);
+        assert!(!settings.post_process_enabled);
+    }
+
+    #[test]
+    fn stored_post_process_mode_survives_migration() {
+        let mut stored = default_settings_json();
+        let map = stored.as_object_mut().unwrap();
+        map.insert("post_process_mode".into(), serde_json::json!("cliproxy"));
+        map.insert("post_process_enabled".into(), serde_json::json!(true));
+
+        let mut settings: AppSettings = serde_json::from_value(stored.clone()).unwrap();
+        apply_settings_migrations(&mut settings, &stored);
+        assert_eq!(settings.post_process_mode, PostProcessMode::Cliproxy);
+    }
+
+    #[test]
+    fn legacy_bool_toggled_by_an_older_build_wins_over_stale_mode() {
+        // An older build knows only post_process_enabled; if it disagrees with
+        // the stored mode, the bool carries the newer intent.
+        let mut stored = default_settings_json();
+        let map = stored.as_object_mut().unwrap();
+        map.insert("post_process_mode".into(), serde_json::json!("cliproxy"));
+        map.insert("post_process_enabled".into(), serde_json::json!(false));
+
+        let mut settings: AppSettings = serde_json::from_value(stored.clone()).unwrap();
+        assert!(apply_settings_migrations(&mut settings, &stored));
+        assert_eq!(settings.post_process_mode, PostProcessMode::Off);
+
+        let mut stored = default_settings_json();
+        let map = stored.as_object_mut().unwrap();
+        map.insert("post_process_mode".into(), serde_json::json!("off"));
+        map.insert("post_process_enabled".into(), serde_json::json!(true));
+
+        let mut settings: AppSettings = serde_json::from_value(stored.clone()).unwrap();
+        assert!(apply_settings_migrations(&mut settings, &stored));
+        assert_eq!(settings.post_process_mode, PostProcessMode::Builtin);
+    }
+
+    #[test]
+    fn cliproxy_api_key_is_redacted_in_debug_output() {
+        let mut settings = get_default_settings();
+        settings.cliproxy_api_key = SecretString::new("sk-super-secret".to_string());
+        let dump = format!("{:?}", settings);
+        assert!(!dump.contains("sk-super-secret"));
+        assert!(dump.contains("[REDACTED]"));
     }
 
     #[test]
@@ -1464,6 +1684,7 @@ mod tests {
             "onboarding_completed": false,
             "whats_new_last_seen_version": default_whats_new_last_seen_version(),
             "overlay_style": "live",
+            "post_process_mode": "off",
             "transcribe_accelerator": "gpu",
             "transcribe_gpu_device": 2
         });

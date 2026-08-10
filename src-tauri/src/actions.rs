@@ -7,7 +7,9 @@ use crate::managers::history::HistoryManager;
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::StreamWorkKind;
 use crate::managers::transcription::TranscriptionManager;
-use crate::settings::{get_settings, AppSettings, OverlayStyle, APPLE_INTELLIGENCE_PROVIDER_ID};
+use crate::settings::{
+    get_settings, AppSettings, OverlayStyle, PostProcessMode, APPLE_INTELLIGENCE_PROVIDER_ID,
+};
 use crate::shortcut;
 use crate::tray::{change_tray_icon, TrayIconState};
 use crate::utils::{
@@ -440,18 +442,38 @@ pub(crate) async fn process_transcription_output(
     }
 
     if post_process {
-        if let Some(processed_text) = post_process_transcription(&settings, &final_text).await {
+        // Dispatch on the selected backend. Every backend returns None on any
+        // failure, which leaves final_text as the raw transcript — the raw
+        // transcript is never lost.
+        let processed = match settings.post_process_mode {
+            PostProcessMode::Off => None,
+            PostProcessMode::Builtin => post_process_transcription(&settings, &final_text).await,
+            PostProcessMode::Cliproxy => {
+                let config = crate::cliproxy::CliproxyConfig::from_settings(&settings);
+                crate::cliproxy::post_process(&config, &final_text).await
+            }
+        };
+
+        if let Some(processed_text) = processed {
             post_processed_text = Some(processed_text.clone());
             final_text = processed_text;
 
-            if let Some(prompt_id) = &settings.post_process_selected_prompt_id {
-                if let Some(prompt) = settings
-                    .post_process_prompts
-                    .iter()
-                    .find(|prompt| &prompt.id == prompt_id)
-                {
-                    post_process_prompt = Some(prompt.prompt.clone());
+            match settings.post_process_mode {
+                PostProcessMode::Builtin => {
+                    if let Some(prompt_id) = &settings.post_process_selected_prompt_id {
+                        if let Some(prompt) = settings
+                            .post_process_prompts
+                            .iter()
+                            .find(|prompt| &prompt.id == prompt_id)
+                        {
+                            post_process_prompt = Some(prompt.prompt.clone());
+                        }
+                    }
                 }
+                PostProcessMode::Cliproxy => {
+                    post_process_prompt = Some(settings.cliproxy_system_prompt.clone());
+                }
+                PostProcessMode::Off => {}
             }
         }
     } else if final_text != transcription {
@@ -517,6 +539,21 @@ impl ShortcutAction for TranscribeAction {
             tm.start_stream();
         }
         let plan_elapsed = plan_started.elapsed();
+
+        // Tell the overlay which post-processing backend this dictation will
+        // run through (None for plain dictations or mode Off) so it can show a
+        // small mode badge. Emitted before the show event so the badge state
+        // is fresh when the overlay appears.
+        let mode_badge = if self.post_process {
+            match settings.post_process_mode {
+                PostProcessMode::Off => None,
+                PostProcessMode::Builtin => Some("builtin"),
+                PostProcessMode::Cliproxy => Some("cliproxy"),
+            }
+        } else {
+            None
+        };
+        let _ = app.emit("post-process-mode", mode_badge);
 
         // Sizing the overlay follows the same advertised capability. A model that
         // doesn't stream (or whose capability is not known yet) gets the compact
@@ -742,10 +779,11 @@ impl ShortcutAction for TranscribeAction {
 
                     match transcription_result {
                         Ok(transcription) => {
+                            // Log timing/size only — never transcript content.
                             debug!(
-                                "Transcription completed in {:?}: '{}'",
+                                "Transcription completed in {:?} ({} chars)",
                                 transcription_time.elapsed(),
-                                transcription
+                                transcription.len()
                             );
 
                             if post_process {
@@ -870,6 +908,19 @@ impl ShortcutAction for TranscribeAction {
     }
 }
 
+// Cycle Post-Process Mode Action (optional shortcut; fires on press only)
+struct CyclePostProcessModeAction;
+
+impl ShortcutAction for CyclePostProcessModeAction {
+    fn start(&self, app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {
+        shortcut::cycle_post_process_mode(app);
+    }
+
+    fn stop(&self, _app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {
+        // Nothing to do on release
+    }
+}
+
 // Cancel Action
 struct CancelAction;
 
@@ -918,6 +969,10 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
     map.insert(
         "transcribe_with_post_process".to_string(),
         Arc::new(TranscribeAction { post_process: true }) as Arc<dyn ShortcutAction>,
+    );
+    map.insert(
+        crate::settings::CYCLE_POST_PROCESS_MODE_BINDING_ID.to_string(),
+        Arc::new(CyclePostProcessModeAction) as Arc<dyn ShortcutAction>,
     );
     map.insert(
         "cancel".to_string(),
