@@ -208,6 +208,10 @@ async changeAutoSubmitKeySetting(key: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Legacy on/off toggle, kept for compatibility: off maps to Off; on restores
+ * Builtin unless a non-Off mode is already active.
+ */
 async changePostProcessEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_post_process_enabled_setting", { enabled }) };
@@ -957,10 +961,8 @@ async updateRecordingRetentionPeriod(period: string) : Promise<Result<null, stri
 }
 },
 /**
- * Checks if the Mac is a laptop by detecting battery presence
- * 
- * This uses pmset to check for battery information.
- * Returns true if a battery is detected (laptop), false otherwise (desktop)
+ * Stub implementation for non-macOS platforms
+ * Always returns false since laptop detection is macOS-specific
  */
 async isLaptop() : Promise<Result<boolean, string>> {
     try {
@@ -1038,13 +1040,13 @@ export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AvailableAccelerators = { transcribe: string[]; ort: string[]; gpu_devices: GpuDeviceOption[] }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
+export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 /**
  * Result of the settings screen's "Test connection" round trip. Exactly one
  * of `response`/`error` is set. This is the only place proxy health is
  * surfaced to the user.
  */
 export type CliproxyTestResult = { latency_ms: number; response: string | null; error: string | null }
-export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
 export type EngineType = 
 /**
