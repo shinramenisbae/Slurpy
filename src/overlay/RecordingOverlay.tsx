@@ -30,6 +30,9 @@ const RecordingOverlay: React.FC = () => {
   const [phase, setPhase] = useState<StreamPhase>("listening");
   const [workKind, setWorkKind] = useState<StreamWorkKind>("transcribing");
   const [elapsed, setElapsed] = useState(0);
+  // Post-processing backend for the current dictation ("builtin" | "cliproxy"),
+  // or null for plain dictations / mode Off. Drives the small mode badge.
+  const [ppMode, setPpMode] = useState<string | null>(null);
   // Bumped on each new streaming session so the Live card remounts fresh (replays
   // the pop-in, and never animates in from the previous panel's open size).
   const [session, setSession] = useState(0);
@@ -94,6 +97,13 @@ const RecordingOverlay: React.FC = () => {
         setLevels(smoothed.slice(0, WAVE_BARS));
       });
 
+      const unlistenPpMode = await listen<string | null>(
+        "post-process-mode",
+        (event) => {
+          setPpMode(event.payload);
+        },
+      );
+
       const unlistenStream = await events.streamTextEvent.listen((event) => {
         setStreamText(event.payload);
       });
@@ -108,6 +118,7 @@ const RecordingOverlay: React.FC = () => {
         unlistenShow();
         unlistenHide();
         unlistenLevel();
+        unlistenPpMode();
         unlistenStream();
         unlistenPhase();
       };
@@ -184,10 +195,16 @@ const RecordingOverlay: React.FC = () => {
 
   // dot (left) | waveform (center) | timer + cancel (right) — same structure for
   // pill & panel, so the Live morph is a pure width change.
+  // Tiny post-processing mode badge; absent for plain dictations and mode Off.
+  const modeBadge = ppMode ? (
+    <span className="smode">{t(`overlay.mode.${ppMode}`)}</span>
+  ) : null;
+
   const listeningRow = (showTimer: boolean, showCancel: boolean) => (
     <div className="sbase">
       <div className="sbase-l">
         <span className="sdot" />
+        {modeBadge}
       </div>
       {waveform}
       <div className="sbase-r">
@@ -203,6 +220,7 @@ const RecordingOverlay: React.FC = () => {
     <div className="sbase">
       <div className="sbase-l">
         <span className="sspinner" />
+        {modeBadge}
       </div>
       <span className="swork-label">{label}</span>
       <div className="sbase-r">{showCancel && cancelBtn}</div>

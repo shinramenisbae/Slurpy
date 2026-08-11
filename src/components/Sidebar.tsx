@@ -60,7 +60,9 @@ export const SECTIONS_CONFIG = {
     labelKey: "sidebar.postProcessing",
     icon: Sparkles,
     component: PostProcessingSettings,
-    enabled: (settings) => settings?.post_process_enabled ?? false,
+    // Always visible: the section is where the three-state mode (Off /
+    // Builtin / CLIProxyAPI) is selected and shown at a glance.
+    enabled: () => true,
   },
   debug: {
     labelKey: "sidebar.debug",

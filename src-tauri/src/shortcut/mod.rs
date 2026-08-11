@@ -22,8 +22,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::settings::APPLE_INTELLIGENCE_DEFAULT_MODEL_ID;
 use crate::settings::{
     self, get_settings, AutoSubmitKey, ClipboardHandling, KeyboardImplementation, LLMPrompt,
-    OverlayPosition, OverlayStyle, PasteMethod, ShortcutBinding, SoundTheme, Theme, TypingTool,
-    APPLE_INTELLIGENCE_PROVIDER_ID,
+    OverlayPosition, OverlayStyle, PasteMethod, PostProcessMode, ShortcutBinding, SoundTheme,
+    Theme, TypingTool, APPLE_INTELLIGENCE_PROVIDER_ID, CYCLE_POST_PROCESS_MODE_BINDING_ID,
 };
 use crate::tray;
 
@@ -79,8 +79,13 @@ pub fn unregister_cancel_shortcut(app: &AppHandle) {
     }
 }
 
-/// Register a shortcut using the appropriate implementation
+/// Register a shortcut using the appropriate implementation.
+/// An unbound binding (empty string, e.g. the optional cycle shortcut) is a
+/// successful no-op.
 pub fn register_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<(), String> {
+    if binding.current_binding.trim().is_empty() {
+        return Ok(());
+    }
     let settings = get_settings(app);
     match settings.keyboard_implementation {
         KeyboardImplementation::Tauri => tauri_impl::register_shortcut(app, binding),
@@ -88,8 +93,12 @@ pub fn register_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<()
     }
 }
 
-/// Unregister a shortcut using the appropriate implementation
+/// Unregister a shortcut using the appropriate implementation.
+/// An unbound binding (empty string) is a successful no-op.
 pub fn unregister_shortcut(app: &AppHandle, binding: ShortcutBinding) -> Result<(), String> {
+    if binding.current_binding.trim().is_empty() {
+        return Ok(());
+    }
     let settings = get_settings(app);
     match settings.keyboard_implementation {
         KeyboardImplementation::Tauri => tauri_impl::unregister_shortcut(app, binding),
@@ -115,9 +124,28 @@ pub fn change_binding(
     id: String,
     binding: String,
 ) -> Result<BindingResponse, String> {
-    // Reject empty bindings — every shortcut should have a value
+    // Reject empty bindings — every shortcut should have a value. The mode
+    // cycle shortcut is the exception: it is optional and unbound by default,
+    // so clearing it just unregisters it.
     if binding.trim().is_empty() {
-        return Err("Binding cannot be empty".to_string());
+        if id != CYCLE_POST_PROCESS_MODE_BINDING_ID {
+            return Err("Binding cannot be empty".to_string());
+        }
+
+        let mut settings = settings::get_settings(&app);
+        let Some(mut existing) = settings.bindings.get(&id).cloned() else {
+            return Err(format!("Binding with id '{}' not found", id));
+        };
+        let _ = unregister_shortcut(&app, existing.clone());
+        existing.current_binding = String::new();
+        settings.bindings.insert(id, existing.clone());
+        settings::write_settings(&app, settings);
+        crate::secure_input::reconcile_fallback(&app);
+        return Ok(BindingResponse {
+            success: true,
+            binding: Some(existing),
+            error: None,
+        });
     }
 
     let mut settings = settings::get_settings(&app);
@@ -255,7 +283,7 @@ pub fn resume_all_shortcuts(app: &AppHandle) {
         if id == "cancel" {
             continue;
         }
-        if id == "transcribe_with_post_process" && !settings.post_process_enabled {
+        if id == "transcribe_with_post_process" && !settings.post_process_active() {
             continue;
         }
         if let Err(e) = register_shortcut(app, binding.clone()) {
@@ -447,7 +475,7 @@ fn register_all_shortcuts_for_implementation(
         }
 
         // Skip post-processing shortcut when the feature is disabled
-        if id == "transcribe_with_post_process" && !current_settings.post_process_enabled {
+        if id == "transcribe_with_post_process" && !current_settings.post_process_active() {
             continue;
         }
 
@@ -456,6 +484,11 @@ fn register_all_shortcuts_for_implementation(
             .get(id)
             .cloned()
             .unwrap_or_else(|| default_binding.clone());
+
+        // Unbound optional shortcuts have nothing to validate or register.
+        if binding.current_binding.trim().is_empty() {
+            continue;
+        }
 
         // Validate the shortcut for the target implementation
         if let Err(e) =
@@ -980,28 +1013,144 @@ pub fn change_auto_submit_key_setting(app: AppHandle, key: String) -> Result<(),
     Ok(())
 }
 
-#[tauri::command]
-#[specta::specta]
-pub fn change_post_process_enabled_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
-    let mut settings = settings::get_settings(&app);
-    settings.post_process_enabled = enabled;
-    settings::write_settings(&app, settings.clone());
+/// Persist a new post-processing mode and apply every side effect: shortcut
+/// registration, tray icon + tooltip, and a frontend refresh event. Shared by
+/// the settings UI command, the legacy enabled toggle, and mode cycling
+/// (`--cycle-post-process-mode` / the optional cycle shortcut).
+pub fn apply_post_process_mode(app: &AppHandle, mode: PostProcessMode) {
+    let mut settings = settings::get_settings(app);
+    settings.post_process_mode = mode;
+    // Keep the legacy bool in sync for older builds and anything still reading it.
+    settings.post_process_enabled = settings.post_process_active();
+    settings::write_settings(app, settings.clone());
 
-    // Register or unregister the post-processing shortcut
+    // Register or unregister the post-processing dictation shortcut
     if let Some(binding) = settings
         .bindings
         .get("transcribe_with_post_process")
         .cloned()
     {
-        if enabled {
-            let _ = register_shortcut(&app, binding);
+        if settings.post_process_active() {
+            let _ = register_shortcut(app, binding);
         } else {
-            let _ = unregister_shortcut(&app, binding);
+            let _ = unregister_shortcut(app, binding);
         }
     }
 
-    crate::secure_input::reconcile_fallback(&app);
+    crate::secure_input::reconcile_fallback(app);
+
+    // The tray icon and tooltip both encode the mode; re-apply them now so a
+    // CLI- or shortcut-driven change is visible immediately.
+    tray::refresh_tray_icon(app);
+
+    let _ = app.emit(
+        "settings-changed",
+        serde_json::json!({
+            "setting": "post_process_mode",
+            "value": mode
+        }),
+    );
+
+    info!("Post-processing mode set to {:?}", mode);
+}
+
+/// Advance the mode Off → Builtin → Cliproxy → Off. Used by the
+/// `--cycle-post-process-mode` CLI flag and the optional cycle shortcut.
+pub fn cycle_post_process_mode(app: &AppHandle) {
+    let mode = settings::get_settings(app).post_process_mode.next();
+    apply_post_process_mode(app, mode);
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_post_process_mode_setting(
+    app: AppHandle,
+    mode: PostProcessMode,
+) -> Result<(), String> {
+    apply_post_process_mode(&app, mode);
     Ok(())
+}
+
+/// Legacy on/off toggle, kept for compatibility: off maps to Off; on restores
+/// Builtin unless a non-Off mode is already active.
+#[tauri::command]
+#[specta::specta]
+pub fn change_post_process_enabled_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let settings = settings::get_settings(&app);
+    let mode = match (enabled, settings.post_process_mode) {
+        (false, _) => PostProcessMode::Off,
+        (true, PostProcessMode::Off) => PostProcessMode::Builtin,
+        (true, current) => current,
+    };
+    apply_post_process_mode(&app, mode);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_cliproxy_base_url_setting(app: AppHandle, base_url: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.cliproxy_base_url = base_url.trim().to_string();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_cliproxy_model_setting(app: AppHandle, model: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.cliproxy_model = model.trim().to_string();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_cliproxy_api_key_setting(app: AppHandle, api_key: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    // No format validation: a local proxy commonly wants only a placeholder,
+    // and an empty string is fine.
+    settings.cliproxy_api_key = settings::SecretString::new(api_key);
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_cliproxy_max_tokens_setting(app: AppHandle, max_tokens: u32) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.cliproxy_max_tokens = max_tokens;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_cliproxy_timeout_ms_setting(app: AppHandle, timeout_ms: u32) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.cliproxy_timeout_ms = u64::from(timeout_ms);
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_cliproxy_system_prompt_setting(app: AppHandle, prompt: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.cliproxy_system_prompt = prompt;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+/// One round trip against the configured Cliproxy endpoint for the settings
+/// screen's "Test connection" button.
+#[tauri::command]
+#[specta::specta]
+pub async fn test_cliproxy_connection(
+    app: AppHandle,
+) -> Result<crate::cliproxy::CliproxyTestResult, String> {
+    let config = crate::cliproxy::CliproxyConfig::from_settings(&settings::get_settings(&app));
+    Ok(crate::cliproxy::test_connection(&config).await)
 }
 
 #[tauri::command]

@@ -20,6 +20,11 @@ pub struct CliArgs {
     #[arg(long)]
     pub toggle_post_process: bool,
 
+    /// Cycle the post-processing mode Off → Builtin → Cliproxy (sent to
+    /// running instance)
+    #[arg(long)]
+    pub cycle_post_process_mode: bool,
+
     /// Cancel the current operation (sent to running instance)
     #[arg(long)]
     pub cancel: bool,

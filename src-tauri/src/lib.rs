@@ -7,6 +7,7 @@ mod autostart;
 mod catalog;
 pub mod cli;
 mod clipboard;
+mod cliproxy;
 mod commands;
 mod helpers;
 mod input;
@@ -205,8 +206,13 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // Get the current theme to set the appropriate initial icon
     let initial_theme = tray::get_current_theme(app_handle);
 
-    // Choose the appropriate initial icon based on theme
-    let initial_icon_path = tray::get_icon_path(initial_theme, tray::TrayIconState::Idle, false);
+    // Choose the appropriate initial icon based on theme and post-processing mode
+    let initial_icon_path = tray::get_icon_path(
+        initial_theme,
+        tray::TrayIconState::Idle,
+        false,
+        settings::get_settings(app_handle).post_process_mode,
+    );
 
     let mut tray_builder = TrayIconBuilder::new()
         .icon(
@@ -218,7 +224,7 @@ fn initialize_core_logic(app_handle: &AppHandle) {
             )
             .unwrap(),
         )
-        .tooltip(tray::tray_tooltip())
+        .tooltip(tray::tray_tooltip(app_handle))
         .icon_as_template(true);
 
     // Windows notification-area convention: left click opens the app, right click
@@ -629,6 +635,14 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_auto_submit_setting,
             shortcut::change_auto_submit_key_setting,
             shortcut::change_post_process_enabled_setting,
+            shortcut::change_post_process_mode_setting,
+            shortcut::change_cliproxy_base_url_setting,
+            shortcut::change_cliproxy_model_setting,
+            shortcut::change_cliproxy_api_key_setting,
+            shortcut::change_cliproxy_max_tokens_setting,
+            shortcut::change_cliproxy_timeout_ms_setting,
+            shortcut::change_cliproxy_system_prompt_setting,
+            shortcut::test_cliproxy_connection,
             shortcut::change_experimental_enabled_setting,
             shortcut::change_post_process_base_url_setting,
             shortcut::change_post_process_api_key_setting,
@@ -805,6 +819,8 @@ pub fn run(cli_args: CliArgs) {
                 signal_handle::send_transcription_input(app, "transcribe", "CLI");
             } else if args.iter().any(|a| a == "--toggle-post-process") {
                 signal_handle::send_transcription_input(app, "transcribe_with_post_process", "CLI");
+            } else if args.iter().any(|a| a == "--cycle-post-process-mode") {
+                shortcut::cycle_post_process_mode(app);
             } else if args.iter().any(|a| a == "--cancel") {
                 crate::utils::cancel_current_operation(app);
             } else {

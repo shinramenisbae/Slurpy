@@ -1,8 +1,8 @@
 use crate::managers::history::{HistoryEntry, HistoryManager};
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::TranscriptionManager;
-use crate::settings;
-use crate::tray_i18n::get_tray_translations;
+use crate::settings::{self, PostProcessMode};
+use crate::tray_i18n::{get_tray_translations, TrayStrings};
 use log::{debug, error, info, warn};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -93,12 +93,23 @@ fn windows_taskbar_theme() -> Option<AppTheme> {
     })
 }
 
-/// Gets the appropriate icon path for the given theme and state.
+/// Gets the appropriate icon path for the given theme, state, and
+/// post-processing mode.
 ///
 /// `warning` overlays a badge on the idle icon while keyboard shortcuts are
 /// blocked (macOS Secure Input); recording/transcribing states keep their
 /// normal icons so in-flight activity stays recognizable.
-pub fn get_icon_path(theme: AppTheme, state: TrayIconState, warning: bool) -> &'static str {
+///
+/// The idle icon carries a shape badge per post-processing mode (one dot for
+/// Builtin, two dots for Cliproxy) so the active mode is readable at 16x16
+/// without relying on colour; Off keeps the stock icons. The warning badge
+/// takes precedence over the mode badge.
+pub fn get_icon_path(
+    theme: AppTheme,
+    state: TrayIconState,
+    warning: bool,
+    mode: PostProcessMode,
+) -> &'static str {
     if warning && state == TrayIconState::Idle {
         return match theme {
             AppTheme::Dark => "resources/tray_idle_warning.png",
@@ -108,19 +119,29 @@ pub fn get_icon_path(theme: AppTheme, state: TrayIconState, warning: bool) -> &'
             AppTheme::Colored => "resources/handy.png",
         };
     }
+    if state == TrayIconState::Idle {
+        return match (theme, mode) {
+            (AppTheme::Dark, PostProcessMode::Off) => "resources/tray_idle.png",
+            (AppTheme::Dark, PostProcessMode::Builtin) => "resources/tray_idle_builtin.png",
+            (AppTheme::Dark, PostProcessMode::Cliproxy) => "resources/tray_idle_cliproxy.png",
+            (AppTheme::Light, PostProcessMode::Off) => "resources/tray_idle_dark.png",
+            (AppTheme::Light, PostProcessMode::Builtin) => "resources/tray_idle_builtin_dark.png",
+            (AppTheme::Light, PostProcessMode::Cliproxy) => "resources/tray_idle_cliproxy_dark.png",
+            (AppTheme::Colored, PostProcessMode::Off) => "resources/handy.png",
+            (AppTheme::Colored, PostProcessMode::Builtin) => "resources/handy_builtin.png",
+            (AppTheme::Colored, PostProcessMode::Cliproxy) => "resources/handy_cliproxy.png",
+        };
+    }
     match (theme, state) {
         // Dark theme uses light icons
-        (AppTheme::Dark, TrayIconState::Idle) => "resources/tray_idle.png",
         (AppTheme::Dark, TrayIconState::Recording) => "resources/tray_recording.png",
-        (AppTheme::Dark, TrayIconState::Transcribing) => "resources/tray_transcribing.png",
+        (AppTheme::Dark, _) => "resources/tray_transcribing.png",
         // Light theme uses dark icons
-        (AppTheme::Light, TrayIconState::Idle) => "resources/tray_idle_dark.png",
         (AppTheme::Light, TrayIconState::Recording) => "resources/tray_recording_dark.png",
-        (AppTheme::Light, TrayIconState::Transcribing) => "resources/tray_transcribing_dark.png",
+        (AppTheme::Light, _) => "resources/tray_transcribing_dark.png",
         // Colored theme uses pink icons (for Linux)
-        (AppTheme::Colored, TrayIconState::Idle) => "resources/handy.png",
         (AppTheme::Colored, TrayIconState::Recording) => "resources/recording.png",
-        (AppTheme::Colored, TrayIconState::Transcribing) => "resources/transcribing.png",
+        (AppTheme::Colored, _) => "resources/transcribing.png",
     }
 }
 
@@ -132,7 +153,8 @@ pub fn change_tray_icon(app: &AppHandle, icon: TrayIconState) {
     app.state::<CurrentTrayIconState>().set(icon);
 
     let warning = crate::secure_input::tray_warning_active(app);
-    let icon_path = get_icon_path(theme, icon, warning);
+    let mode = settings::get_settings(app).post_process_mode;
+    let icon_path = get_icon_path(theme, icon, warning, mode);
 
     let icon_started = std::time::Instant::now();
     if let Err(err) = load_tray_icon(
@@ -169,8 +191,43 @@ fn load_tray_icon(resolved_icon_path: tauri::Result<PathBuf>) -> tauri::Result<I
     Image::from_path(&resolved_icon_path).map(Image::to_owned)
 }
 
-pub fn tray_tooltip() -> String {
-    version_label()
+/// "Handy vX.Y.Z — post-processing: <Mode>". The tooltip always names the
+/// active post-processing mode so it is readable at a glance.
+pub fn tray_tooltip(app: &AppHandle) -> String {
+    let settings = settings::get_settings(app);
+    let strings = get_tray_translations(Some(settings.app_language.clone()));
+    format!(
+        "{} — {}",
+        version_label(),
+        post_process_mode_label(&strings, settings.post_process_mode)
+    )
+}
+
+/// "post-processing: <Mode>", falling back to English for locales that have
+/// not translated the new keys yet (build.rs emits "" for missing keys).
+fn post_process_mode_label(strings: &TrayStrings, mode: PostProcessMode) -> String {
+    let english = get_tray_translations(Some("en".to_string()));
+    let pick = |value: &str, english_value: &str| {
+        if value.is_empty() {
+            english_value.to_string()
+        } else {
+            value.to_string()
+        }
+    };
+
+    let label = pick(&strings.post_processing, &english.post_processing);
+    let value = match mode {
+        PostProcessMode::Off => pick(&strings.post_processing_off, &english.post_processing_off),
+        PostProcessMode::Builtin => pick(
+            &strings.post_processing_builtin,
+            &english.post_processing_builtin,
+        ),
+        PostProcessMode::Cliproxy => pick(
+            &strings.post_processing_cliproxy,
+            &english.post_processing_cliproxy,
+        ),
+    };
+    format!("{label}: {value}")
 }
 
 fn version_label() -> String {
@@ -322,7 +379,11 @@ pub fn update_tray_menu(app: &AppHandle, locale: Option<&str>) {
 
     // Both layouts start with [version, separator, ...]; slot the warning in
     // right below the version line so it's the first actionable thing seen.
-    let mut tooltip = version_label;
+    let mut tooltip = format!(
+        "{} — {}",
+        version_label,
+        post_process_mode_label(&strings, settings.post_process_mode)
+    );
     if let Some(warning_item) = secure_input_warning {
         let _ = menu.insert(&warning_item, 2);
         let _ = menu.insert(&separator(), 3);

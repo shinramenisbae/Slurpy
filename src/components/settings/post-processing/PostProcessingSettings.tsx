@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { RefreshCcw } from "lucide-react";
 import { commands } from "@/bindings";
+import type { CliproxyTestResult } from "@/bindings";
 
 import { Alert } from "../../ui/Alert";
 import {
@@ -19,6 +20,7 @@ import { BaseUrlField } from "../PostProcessingSettingsApi/BaseUrlField";
 import { ApiKeyField } from "../PostProcessingSettingsApi/ApiKeyField";
 import { ModelSelect } from "../PostProcessingSettingsApi/ModelSelect";
 import { usePostProcessProviderState } from "../PostProcessingSettingsApi/usePostProcessProviderState";
+import { PostProcessingToggle } from "../PostProcessingToggle";
 import { ShortcutInput } from "../ShortcutInput";
 import { useSettings } from "../../../hooks/useSettings";
 
@@ -424,26 +426,259 @@ export const PostProcessingSettingsPrompts = React.memo(
 );
 PostProcessingSettingsPrompts.displayName = "PostProcessingSettingsPrompts";
 
+const CliproxySettingsComponent: React.FC = () => {
+  const { t } = useTranslation();
+  const { getSetting, updateSetting, isUpdating } = useSettings();
+  const [testResult, setTestResult] = useState<CliproxyTestResult | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const numberField = (
+    key: "cliproxy_max_tokens" | "cliproxy_timeout_ms",
+    fallback: number,
+  ) => ({
+    value: getSetting(key) ?? fallback,
+    commit: (raw: string) => {
+      const parsed = Number.parseInt(raw, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        updateSetting(key, parsed);
+      }
+    },
+  });
+
+  const maxTokens = numberField("cliproxy_max_tokens", 1024);
+  const timeoutMs = numberField("cliproxy_timeout_ms", 1500);
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const result = await commands.testCliproxyConnection();
+      if (result.status === "ok") {
+        setTestResult(result.data);
+      } else {
+        setTestResult({ latency_ms: 0, response: null, error: result.error });
+      }
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  return (
+    <>
+      <SettingContainer
+        title={t("settings.postProcessing.cliproxy.baseUrl.title")}
+        description={t("settings.postProcessing.cliproxy.baseUrl.description")}
+        descriptionMode="tooltip"
+        layout="horizontal"
+        grouped={true}
+      >
+        <BaseUrlField
+          value={getSetting("cliproxy_base_url") ?? ""}
+          onBlur={(value) => updateSetting("cliproxy_base_url", value)}
+          placeholder={t(
+            "settings.postProcessing.cliproxy.baseUrl.placeholder",
+          )}
+          disabled={isUpdating("cliproxy_base_url")}
+          className="min-w-[380px]"
+        />
+      </SettingContainer>
+
+      <SettingContainer
+        title={t("settings.postProcessing.cliproxy.model.title")}
+        description={t("settings.postProcessing.cliproxy.model.description")}
+        descriptionMode="tooltip"
+        layout="horizontal"
+        grouped={true}
+      >
+        <BaseUrlField
+          value={getSetting("cliproxy_model") ?? ""}
+          onBlur={(value) => updateSetting("cliproxy_model", value)}
+          placeholder={t("settings.postProcessing.cliproxy.model.placeholder")}
+          disabled={isUpdating("cliproxy_model")}
+          className="min-w-[380px]"
+        />
+      </SettingContainer>
+
+      <SettingContainer
+        title={t("settings.postProcessing.cliproxy.apiKey.title")}
+        description={t("settings.postProcessing.cliproxy.apiKey.description")}
+        descriptionMode="tooltip"
+        layout="horizontal"
+        grouped={true}
+      >
+        <ApiKeyField
+          value={getSetting("cliproxy_api_key") ?? ""}
+          onBlur={(value) => updateSetting("cliproxy_api_key", value)}
+          placeholder={t("settings.postProcessing.cliproxy.apiKey.placeholder")}
+          disabled={isUpdating("cliproxy_api_key")}
+          className="min-w-[320px]"
+        />
+      </SettingContainer>
+
+      <SettingContainer
+        title={t("settings.postProcessing.cliproxy.maxTokens.title")}
+        description={t(
+          "settings.postProcessing.cliproxy.maxTokens.description",
+        )}
+        descriptionMode="tooltip"
+        layout="horizontal"
+        grouped={true}
+      >
+        <Input
+          type="number"
+          defaultValue={maxTokens.value}
+          onBlur={(event) => maxTokens.commit(event.target.value)}
+          variant="compact"
+          disabled={isUpdating("cliproxy_max_tokens")}
+          className="w-28"
+        />
+      </SettingContainer>
+
+      <SettingContainer
+        title={t("settings.postProcessing.cliproxy.timeoutMs.title")}
+        description={t(
+          "settings.postProcessing.cliproxy.timeoutMs.description",
+        )}
+        descriptionMode="tooltip"
+        layout="horizontal"
+        grouped={true}
+      >
+        <Input
+          type="number"
+          defaultValue={timeoutMs.value}
+          onBlur={(event) => timeoutMs.commit(event.target.value)}
+          variant="compact"
+          disabled={isUpdating("cliproxy_timeout_ms")}
+          className="w-28"
+        />
+      </SettingContainer>
+
+      <SettingContainer
+        title={t("settings.postProcessing.cliproxy.systemPrompt.title")}
+        description={t(
+          "settings.postProcessing.cliproxy.systemPrompt.description",
+        )}
+        descriptionMode="tooltip"
+        layout="stacked"
+        grouped={true}
+      >
+        <CliproxySystemPromptField
+          value={getSetting("cliproxy_system_prompt") ?? ""}
+          onCommit={(value) => updateSetting("cliproxy_system_prompt", value)}
+          disabled={isUpdating("cliproxy_system_prompt")}
+        />
+      </SettingContainer>
+
+      <SettingContainer
+        title={t("settings.postProcessing.cliproxy.testConnection.title")}
+        description={t(
+          "settings.postProcessing.cliproxy.testConnection.description",
+        )}
+        descriptionMode="tooltip"
+        layout="stacked"
+        grouped={true}
+      >
+        <div className="space-y-2">
+          <Button
+            onClick={handleTestConnection}
+            variant="primary"
+            size="md"
+            disabled={isTesting}
+          >
+            {isTesting
+              ? t("settings.postProcessing.cliproxy.testConnection.testing")
+              : t("settings.postProcessing.cliproxy.testConnection.button")}
+          </Button>
+          {testResult && (
+            <Alert variant={testResult.error ? "error" : "success"} contained>
+              {testResult.error
+                ? t("settings.postProcessing.cliproxy.testConnection.failure", {
+                    latency: testResult.latency_ms,
+                    error: testResult.error,
+                  })
+                : t("settings.postProcessing.cliproxy.testConnection.success", {
+                    latency: testResult.latency_ms,
+                    response: testResult.response ?? "",
+                  })}
+            </Alert>
+          )}
+        </div>
+      </SettingContainer>
+    </>
+  );
+};
+
+interface CliproxySystemPromptFieldProps {
+  value: string;
+  onCommit: (value: string) => void;
+  disabled: boolean;
+}
+
+const CliproxySystemPromptField: React.FC<CliproxySystemPromptFieldProps> = ({
+  value,
+  onCommit,
+  disabled,
+}) => {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  return (
+    <Textarea
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        if (draft !== value) onCommit(draft);
+      }}
+      disabled={disabled}
+    />
+  );
+};
+
+export const CliproxySettings = React.memo(CliproxySettingsComponent);
+CliproxySettings.displayName = "CliproxySettings";
+
 export const PostProcessingSettings: React.FC = () => {
   const { t } = useTranslation();
+  const { getSetting } = useSettings();
+
+  const mode = getSetting("post_process_mode") ?? "off";
 
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
-      <SettingsGroup title={t("settings.postProcessing.hotkey.title")}>
-        <ShortcutInput
-          shortcutId="transcribe_with_post_process"
-          descriptionMode="tooltip"
-          grouped={true}
-        />
+      <SettingsGroup title={t("settings.postProcessing.mode.title")}>
+        <PostProcessingToggle descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>
 
-      <SettingsGroup title={t("settings.postProcessing.api.title")}>
-        <PostProcessingSettingsApi />
-      </SettingsGroup>
+      {mode !== "off" && (
+        <SettingsGroup title={t("settings.postProcessing.hotkey.title")}>
+          <ShortcutInput
+            shortcutId="transcribe_with_post_process"
+            descriptionMode="tooltip"
+            grouped={true}
+          />
+        </SettingsGroup>
+      )}
 
-      <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
-        <PostProcessingSettingsPrompts />
-      </SettingsGroup>
+      {mode === "builtin" && (
+        <>
+          <SettingsGroup title={t("settings.postProcessing.api.title")}>
+            <PostProcessingSettingsApi />
+          </SettingsGroup>
+
+          <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
+            <PostProcessingSettingsPrompts />
+          </SettingsGroup>
+        </>
+      )}
+
+      {mode === "cliproxy" && (
+        <SettingsGroup title={t("settings.postProcessing.cliproxy.title")}>
+          <CliproxySettings />
+        </SettingsGroup>
+      )}
     </div>
   );
 };

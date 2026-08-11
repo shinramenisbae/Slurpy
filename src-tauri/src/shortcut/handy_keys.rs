@@ -434,7 +434,7 @@ pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
             continue;
         }
         // Skip post-processing shortcut when the feature is disabled
-        if id == "transcribe_with_post_process" && !user_settings.post_process_enabled {
+        if id == "transcribe_with_post_process" && !user_settings.post_process_active() {
             continue;
         }
 
@@ -443,6 +443,11 @@ pub fn init_shortcuts(app: &AppHandle) -> Result<(), String> {
             .get(&id)
             .cloned()
             .unwrap_or(default_binding);
+
+        // Unbound optional shortcuts (e.g. cycle_post_process_mode) register nothing.
+        if binding.current_binding.trim().is_empty() {
+            continue;
+        }
 
         if let Err(e) = state.register(&binding) {
             error!(
