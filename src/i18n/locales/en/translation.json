@@ -642,11 +642,6 @@
         "description": "View source code and contribute",
         "button": "View on GitHub"
       },
-      "supportDevelopment": {
-        "title": "Support Upstream",
-        "description": "Slurpy is built on Handy — donations go to CJ Pais, Handy's developer",
-        "button": "Donate"
-      },
       "acknowledgments": {
         "title": "Acknowledgments",
         "ggml": {
