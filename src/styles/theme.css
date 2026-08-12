@@ -6,12 +6,12 @@
      in App.css reference these, so a hex value lives in exactly one place. */
   --light-color-text: #0f0f0f;
   --light-color-background: #fbfbfb;
-  --light-color-logo-primary: #faa2ca;
+  --light-color-logo-primary: #e23744;
   --light-color-logo-stroke: #382731;
 
   --dark-color-text: #fbfbfb;
   --dark-color-background: #2c2b29;
-  --dark-color-logo-primary: #f28cbb;
+  --dark-color-logo-primary: #ff6f79;
   --dark-color-logo-stroke: #fad1ed;
 
   /* Semantic status colors. First used by SecureInputWarning; intended to

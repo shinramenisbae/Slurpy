@@ -1,8 +1,20 @@
-# Handy
+# Slurpy 🍜
 
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/WVBeWsNXK4)
+**A free, open source speech-to-text app that works offline — with optional AI cleanup of your dictations.**
 
-**A free, open source, and extensible speech-to-text application that works completely offline.**
+Slurpy is a renamed fork of [Handy](https://github.com/cjpais/Handy) by CJ Pais
+(MIT licensed — see [LICENSE](LICENSE)). It slurps up your speech and serves it
+back as clean text. On top of upstream Handy it adds a selectable
+post-processing backend: `Off` (raw paste), `Builtin` (Handy's provider
+pipeline), or `Cliproxy` (an Anthropic Messages-compatible endpoint such as a
+local [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) — see
+[CLIPROXY.md](CLIPROXY.md)), plus per-mode tray icons and a mode badge on the
+recording overlay. Slurpy is not affiliated with upstream Handy; for the
+original, visit [handy.computer](https://handy.computer).
+
+---
+
+Original Handy README (names updated) follows:
 
 Handy is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud.
 

@@ -1,8 +1,8 @@
 [package]
 name = "handy"
 version = "0.9.5"
-description = "Handy"
-authors = ["cjpais"]
+description = "Slurpy — local speech-to-text with AI cleanup (a renamed fork of Handy)"
+authors = ["shinramenisbae", "cjpais"]
 edition = "2021"
 license = "MIT"
 default-run = "handy"

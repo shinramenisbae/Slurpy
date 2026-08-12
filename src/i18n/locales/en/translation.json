@@ -7,7 +7,7 @@
     "model": "Model",
     "quit": "Quit",
     "cancel": "Cancel",
-    "secureInputWarning": "⚠ Shortcuts blocked by Secure Input",
+    "secureInputWarning": "âš  Shortcuts blocked by Secure Input",
     "postProcessing": "post-processing",
     "postProcessingOff": "Off",
     "postProcessingBuiltin": "Builtin",
@@ -105,7 +105,7 @@
     },
     "permissions": {
       "title": "Permissions Required",
-      "description": "Handy needs a couple of permissions to work properly.",
+      "description": "Slurpy needs a couple of permissions to work properly.",
       "microphone": {
         "title": "Microphone Access",
         "description": "Required to hear your voice for transcription."
@@ -165,7 +165,7 @@
     "general": {
       "title": "General",
       "shortcut": {
-        "title": "Handy Shortcuts",
+        "title": "Slurpy Shortcuts",
         "description": "Configure keyboard shortcuts to trigger speech-to-text recording",
         "loading": "Loading shortcuts...",
         "none": "No shortcuts configured",
@@ -206,7 +206,7 @@
     "models": {
       "title": "Transcription Models",
       "description": "Select a transcription model or download additional models. Different models offer varying levels of accuracy and speed.",
-      "searchPlaceholder": "Search models by name…",
+      "searchPlaceholder": "Search models by nameâ€¦",
       "yourModels": "Downloaded Models",
       "availableModels": "Available to Download",
       "deleteConfirm": "Are you sure you want to delete {{modelName}}? You will need to download it again to use it.",
@@ -219,7 +219,7 @@
       },
       "rescan": {
         "label": "Rescan",
-        "tooltip": "Rescan for models added to the models folder or Hugging Face cache outside Handy"
+        "tooltip": "Rescan for models added to the models folder or Hugging Face cache outside Slurpy"
       },
       "noModelsMatch": "No models match this filter."
     },
@@ -287,16 +287,16 @@
       },
       "autostart": {
         "label": "Launch on Startup",
-        "description": "Automatically start Handy when you log in to your computer."
+        "description": "Automatically start Slurpy when you log in to your computer."
       },
       "showTrayIcon": {
         "label": "Show Tray Icon",
-        "description": "Display the Handy icon in the system tray."
+        "description": "Display the Slurpy icon in the system tray."
       },
       "overlay": {
         "style": {
           "title": "Overlay",
-          "description": "Choose the recording overlay: None hides it, Minimal shows a compact pill, Live shows transcription in real time as you speak (streaming-capable models only — look for the Streaming badge in the model picker). On Linux 'None' is recommended.",
+          "description": "Choose the recording overlay: None hides it, Minimal shows a compact pill, Live shows transcription in real time as you speak (streaming-capable models only â€” look for the Streaming badge in the model picker). On Linux 'None' is recommended.",
           "options": {
             "none": "None",
             "minimal": "Minimal",
@@ -371,7 +371,7 @@
       },
       "customWords": {
         "title": "Custom Words",
-        "description": "Help supported models recognize names and specialized terms. Fuzzy correction is currently limited to words using A–Z and numbers.",
+        "description": "Help supported models recognize names and specialized terms. Fuzzy correction is currently limited to words using Aâ€“Z and numbers.",
         "placeholder": "Add a word",
         "add": "Add",
         "remove": "Remove {{word}}",
@@ -432,8 +432,8 @@
           "description": "One round trip against the endpoint. Reports latency and the response or the exact error.",
           "button": "Test connection",
           "testing": "Testing...",
-          "success": "{{latency}} ms — {{response}}",
-          "failure": "{{latency}} ms — {{error}}"
+          "success": "{{latency}} ms â€” {{response}}",
+          "failure": "{{latency}} ms â€” {{error}}"
         }
       },
       "api": {
@@ -520,11 +520,11 @@
         "resume": "Resume",
         "copied": "Copied",
         "lineCount": "{{count}} lines",
-        "empty": "Waiting for logs… Entries appear here as the app emits them."
+        "empty": "Waiting for logsâ€¦ Entries appear here as the app emits them."
       },
       "updateChecks": {
         "label": "Check for Updates",
-        "description": "Automatically check for new versions of Handy"
+        "description": "Automatically check for new versions of Slurpy"
       },
       "whatsNewPreview": {
         "title": "Preview What's New",
@@ -604,9 +604,9 @@
       },
       "keyboardDiagnostic": {
         "title": "Keyboard Diagnostic",
-        "description": "Checks whether keyboard events reach Handy. Only event counts are recorded — never which keys you press.",
+        "description": "Checks whether keyboard events reach Slurpy. Only event counts are recorded â€” never which keys you press.",
         "run": "Run 10s diagnostic",
-        "running": "Listening… press your shortcut a few times (e.g. Option+Space)",
+        "running": "Listeningâ€¦ press your shortcut a few times (e.g. Option+Space)",
         "secureInputLabel": "Secure Input",
         "enabled": "enabled",
         "disabled": "disabled",
@@ -616,10 +616,10 @@
         "keyUp": "Key up",
         "flagsChanged": "Modifiers",
         "mouse": "Mouse",
-        "verdictBlocked": "Secure Input is blocking key events — keyed shortcuts cannot work until it is resolved.",
-        "verdictSuspicious": "Modifier events arrived but no key events — something is suppressing keys even though Secure Input reports disabled. Please report this on GitHub.",
-        "verdictOk": "Key events are reaching Handy normally.",
-        "verdictNoEvents": "No events captured — did you press any keys during the test?",
+        "verdictBlocked": "Secure Input is blocking key events â€” keyed shortcuts cannot work until it is resolved.",
+        "verdictSuspicious": "Modifier events arrived but no key events â€” something is suppressing keys even though Secure Input reports disabled. Please report this on GitHub.",
+        "verdictOk": "Key events are reaching Slurpy normally.",
+        "verdictNoEvents": "No events captured â€” did you press any keys during the test?",
         "failed": "Diagnostic failed: {{error}}"
       }
     },
@@ -627,15 +627,15 @@
       "title": "About",
       "version": {
         "title": "Version",
-        "description": "Current version of Handy"
+        "description": "Current version of Slurpy"
       },
       "whatsNewUpdates": {
         "label": "Show What's New",
-        "description": "Show release notes after Handy updates"
+        "description": "Show release notes after Slurpy updates"
       },
       "appDataDirectory": {
         "title": "App Data Directory",
-        "description": "Location where Handy stores its data"
+        "description": "Location where Slurpy stores its data"
       },
       "sourceCode": {
         "title": "Source Code",
@@ -644,7 +644,7 @@
       },
       "supportDevelopment": {
         "title": "Support Development",
-        "description": "Help us continue building Handy",
+        "description": "Help us continue building Slurpy",
         "button": "Donate"
       },
       "acknowledgments": {
@@ -652,7 +652,7 @@
         "ggml": {
           "title": "ggml",
           "description": "High-performance tensor library for on-device machine learning inference",
-          "details": "Handy's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
+          "details": "Slurpy's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
         }
       }
     }
@@ -667,13 +667,13 @@
     "preparing": "Preparing...",
     "checkForUpdates": "Check for updates",
     "portableUpdateTitle": "Manual update required",
-    "portableUpdateMessage": "Portable installs cannot be updated automatically. Download the installer for your system below, run it, and install to the same folder — your Data/ folder (settings, models, recordings) is kept in place.",
+    "portableUpdateMessage": "Portable installs cannot be updated automatically. Download the installer for your system below, run it, and install to the same folder â€” your Data/ folder (settings, models, recordings) is kept in place.",
     "portableUpdateButton": "Download installer",
-    "portableUpdateBrowseMessage": "Portable installs cannot be updated automatically. Download the latest version for your system from GitHub Releases and install it to the same folder — your Data/ folder (settings, models, recordings) is kept in place.",
+    "portableUpdateBrowseMessage": "Portable installs cannot be updated automatically. Download the latest version for your system from GitHub Releases and install it to the same folder â€” your Data/ folder (settings, models, recordings) is kept in place.",
     "portableUpdateBrowseButton": "Open GitHub Releases"
   },
   "whatsNew": {
-    "title": "New in Handy v{{version}}"
+    "title": "New in Slurpy v{{version}}"
   },
   "common": {
     "loading": "Loading...",
@@ -685,7 +685,7 @@
     "noOptionsFound": "No options found"
   },
   "accessibility": {
-    "permissionsDescription": "Handy needs accessibility permissions to type transcribed text.",
+    "permissionsDescription": "Slurpy needs accessibility permissions to type transcribed text.",
     "openSettings": "Open System Settings"
   },
   "errors": {
@@ -693,8 +693,8 @@
     "micPermissionDeniedTitle": "Microphone Access Denied",
     "micPermissionDenied": {
       "generic": "Microphone access was denied by the operating system. Please grant microphone permission in your system settings.",
-      "windows": "Enable microphone access in Settings → Privacy & security → Microphone (including desktop app access).",
-      "macos": "Grant microphone access in System Settings → Privacy & Security → Microphone.",
+      "windows": "Enable microphone access in Settings â†’ Privacy & security â†’ Microphone (including desktop app access).",
+      "macos": "Grant microphone access in System Settings â†’ Privacy & Security â†’ Microphone.",
       "linux": "Grant microphone access in your system's sound or privacy settings."
     },
     "noInputDeviceTitle": "No Microphone Found",
@@ -708,11 +708,11 @@
   },
   "appLanguage": {
     "title": "Application Language",
-    "description": "Change the language of the Handy interface"
+    "description": "Change the language of the Slurpy interface"
   },
   "theme": {
     "title": "Application Theme",
-    "description": "Choose whether Handy follows your system theme or stays light or dark",
+    "description": "Choose whether Slurpy follows your system theme or stays light or dark",
     "options": {
       "system": "System",
       "light": "Light",
@@ -735,7 +735,7 @@
     "recorderBlockedWithCulprit": "{{name}} may be blocking shortcut changes",
     "recorderBlockedNoCulprit": "macOS is temporarily blocking shortcut changes",
     "learnMore": "How to fix",
-    "recorderBlocked": "Can't record shortcuts right now — macOS Secure Input is blocking key events. Resolve the Secure Input warning first.",
+    "recorderBlocked": "Can't record shortcuts right now â€” macOS Secure Input is blocking key events. Resolve the Secure Input warning first.",
     "dismiss": "Dismiss"
   }
 }

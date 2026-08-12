@@ -147,6 +147,71 @@ fn should_force_show_permissions_window(app: &AppHandle) -> bool {
     false
 }
 
+/// One-time migration from the pre-rename identity: Slurpy is a renamed fork
+/// of Handy, and the bundle identifier change (com.pais.handy →
+/// com.shinramenisbae.slurpy) moves the app-data directory. Copy the legacy
+/// directory (settings, history, recordings, downloaded models) into the new
+/// location on first launch so users keep their setup. The legacy directory is
+/// left in place — this copies, never deletes.
+///
+/// Update checks are forced off in the copied settings: the migrated store
+/// predates the rename, and the upstream update endpoint would "update" a
+/// renamed install back into stock Handy (the endpoint itself is already
+/// removed from tauri.conf.json; this just avoids a failing check per launch).
+fn migrate_legacy_handy_data(app: &AppHandle) {
+    let Ok(new_dir) = crate::portable::app_data_dir(app) else {
+        return;
+    };
+    if new_dir.join(settings::SETTINGS_STORE_PATH).exists() {
+        return; // already migrated (or a fresh install that has run before)
+    }
+    let Some(base) = new_dir.parent() else {
+        return;
+    };
+    let legacy_dir = base.join("com.pais.handy");
+    if !legacy_dir.join(settings::SETTINGS_STORE_PATH).exists() {
+        return; // nothing to migrate
+    }
+
+    log::info!(
+        "Migrating legacy Handy data from {} to {}",
+        legacy_dir.display(),
+        new_dir.display()
+    );
+    if let Err(e) = copy_dir_recursive(&legacy_dir, &new_dir) {
+        log::error!("Legacy data migration failed (starting fresh): {e}");
+        return;
+    }
+
+    // Force update checks off in the migrated store (see doc comment).
+    let store_path = new_dir.join(settings::SETTINGS_STORE_PATH);
+    if let Ok(raw) = std::fs::read_to_string(&store_path) {
+        if let Ok(mut json) = serde_json::from_str::<serde_json::Value>(&raw) {
+            if let Some(settings_obj) = json.get_mut("settings").and_then(|v| v.as_object_mut()) {
+                settings_obj.insert("update_checks_enabled".into(), serde_json::json!(false));
+                if let Ok(updated) = serde_json::to_string(&json) {
+                    let _ = std::fs::write(&store_path, updated);
+                }
+            }
+        }
+    }
+    log::info!("Legacy Handy data migration complete");
+}
+
+fn copy_dir_recursive(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let target = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_recursive(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
+}
+
 fn initialize_core_logic(app_handle: &AppHandle) {
     // Note: Enigo (keyboard/mouse simulation) is NOT initialized here.
     // The frontend is responsible for calling the `initialize_enigo` command
@@ -847,6 +912,10 @@ pub fn run(cli_args: CliArgs) {
         .setup(move |app| {
             specta_builder.mount_events(app);
 
+            // Must run before anything reads the store or model registry —
+            // both the headless and the normal path below.
+            migrate_legacy_handy_data(app.handle());
+
             // Headless one-shot path (`--transcribe-file` / `--list-devices` /
             // `--list-models`): initialize only what transcription needs — the
             // store/paths plugins, the model + transcription managers, and the
@@ -893,7 +962,7 @@ pub fn run(cli_args: CliArgs) {
             // for portable mode (redirects WebView2 cache to portable Data dir)
             let mut win_builder =
                 tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("/".into()))
-                    .title("Handy")
+                    .title("Slurpy")
                     .inner_size(680.0, 570.0)
                     .min_inner_size(680.0, 570.0)
                     .resizable(true)
