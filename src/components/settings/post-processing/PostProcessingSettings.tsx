@@ -432,22 +432,6 @@ const CliproxySettingsComponent: React.FC = () => {
   const [testResult, setTestResult] = useState<CliproxyTestResult | null>(null);
   const [isTesting, setIsTesting] = useState(false);
 
-  const numberField = (
-    key: "cliproxy_max_tokens" | "cliproxy_timeout_ms",
-    fallback: number,
-  ) => ({
-    value: getSetting(key) ?? fallback,
-    commit: (raw: string) => {
-      const parsed = Number.parseInt(raw, 10);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        updateSetting(key, parsed);
-      }
-    },
-  });
-
-  const maxTokens = numberField("cliproxy_max_tokens", 1024);
-  const timeoutMs = numberField("cliproxy_timeout_ms", 1500);
-
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestResult(null);
@@ -524,13 +508,10 @@ const CliproxySettingsComponent: React.FC = () => {
         layout="horizontal"
         grouped={true}
       >
-        <Input
-          type="number"
-          defaultValue={maxTokens.value}
-          onBlur={(event) => maxTokens.commit(event.target.value)}
-          variant="compact"
+        <CliproxyNumberField
+          value={getSetting("cliproxy_max_tokens") ?? 1024}
+          onCommit={(n) => updateSetting("cliproxy_max_tokens", n)}
           disabled={isUpdating("cliproxy_max_tokens")}
-          className="w-28"
         />
       </SettingContainer>
 
@@ -543,13 +524,10 @@ const CliproxySettingsComponent: React.FC = () => {
         layout="horizontal"
         grouped={true}
       >
-        <Input
-          type="number"
-          defaultValue={timeoutMs.value}
-          onBlur={(event) => timeoutMs.commit(event.target.value)}
-          variant="compact"
+        <CliproxyNumberField
+          value={getSetting("cliproxy_timeout_ms") ?? 1500}
+          onCommit={(n) => updateSetting("cliproxy_timeout_ms", n)}
           disabled={isUpdating("cliproxy_timeout_ms")}
-          className="w-28"
         />
       </SettingContainer>
 
@@ -605,6 +583,40 @@ const CliproxySettingsComponent: React.FC = () => {
         </div>
       </SettingContainer>
     </>
+  );
+};
+
+// Controlled number input that stays in sync with the store (an uncontrolled
+// defaultValue snapshots the pre-load fallback and then lies forever) and
+// reverts to the last good value on invalid input.
+const CliproxyNumberField: React.FC<{
+  value: number;
+  onCommit: (n: number) => void;
+  disabled: boolean;
+}> = ({ value, onCommit, disabled }) => {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  return (
+    <Input
+      type="number"
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        const parsed = Number.parseInt(draft, 10);
+        if (Number.isFinite(parsed) && parsed > 0 && parsed !== value) {
+          onCommit(parsed);
+        } else {
+          setDraft(String(value));
+        }
+      }}
+      variant="compact"
+      disabled={disabled}
+      className="w-28"
+    />
   );
 };
 

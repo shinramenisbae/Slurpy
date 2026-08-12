@@ -403,12 +403,12 @@
         "baseUrl": {
           "title": "Base URL",
           "description": "Anthropic Messages-compatible endpoint. Plain http is fine for loopback hosts.",
-          "placeholder": "http://127.0.0.1:8317"
+          "placeholder": "e.g. http://127.0.0.1:8317"
         },
         "model": {
           "title": "Model",
-          "description": "Model identifier sent with each request.",
-          "placeholder": "claude-haiku-4-5"
+          "description": "Model identifier sent with each request. Note: CLIProxyAPI only routes dated ids.",
+          "placeholder": "e.g. claude-haiku-4-5-20251001"
         },
         "apiKey": {
           "title": "API Key",
