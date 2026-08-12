@@ -643,8 +643,8 @@
         "button": "View on GitHub"
       },
       "supportDevelopment": {
-        "title": "Support Development",
-        "description": "Help us continue building Slurpy",
+        "title": "Support Upstream",
+        "description": "Slurpy is built on Handy — donations go to CJ Pais, Handy's developer",
         "button": "Donate"
       },
       "acknowledgments": {
