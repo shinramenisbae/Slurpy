@@ -35,7 +35,7 @@ const HandyTextLogo = ({
         strokeLinecap="round"
       />
       {/* Brand name, deliberately untranslated */}
-      {/* eslint-disable-next-line i18next/no-literal-string */}
+      {/* eslint-disable i18next/no-literal-string */}
       <text
         x="100"
         y="74"
@@ -46,6 +46,7 @@ const HandyTextLogo = ({
       >
         Slurpy
       </text>
+      {/* eslint-enable i18next/no-literal-string */}
     </svg>
   );
 };
