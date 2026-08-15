@@ -148,7 +148,7 @@ fn should_force_show_permissions_window(app: &AppHandle) -> bool {
 }
 
 /// One-time migration from the pre-rename identity: Slurpy is a renamed fork
-/// of Handy, and the bundle identifier change (com.pais.handy →
+/// of Slurpy, and the bundle identifier change (com.pais.handy →
 /// com.shinramenisbae.slurpy) moves the app-data directory. Copy the legacy
 /// directory (settings, history, recordings, downloaded models) into the new
 /// location on first launch so users keep their setup. The legacy directory is
@@ -156,7 +156,7 @@ fn should_force_show_permissions_window(app: &AppHandle) -> bool {
 ///
 /// Update checks are forced off in the copied settings: the migrated store
 /// predates the rename, and the upstream update endpoint would "update" a
-/// renamed install back into stock Handy (the endpoint itself is already
+/// renamed install back into stock Slurpy (the endpoint itself is already
 /// removed from tauri.conf.json; this just avoids a failing check per launch).
 fn migrate_legacy_handy_data(app: &AppHandle) {
     let Ok(new_dir) = crate::portable::app_data_dir(app) else {
@@ -174,7 +174,7 @@ fn migrate_legacy_handy_data(app: &AppHandle) {
     }
 
     log::info!(
-        "Migrating legacy Handy data from {} to {}",
+        "Migrating legacy Slurpy data from {} to {}",
         legacy_dir.display(),
         new_dir.display()
     );
@@ -195,7 +195,7 @@ fn migrate_legacy_handy_data(app: &AppHandle) {
             }
         }
     }
-    log::info!("Legacy Handy data migration complete");
+    log::info!("Legacy Slurpy data migration complete");
 }
 
 fn copy_dir_recursive(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
@@ -873,7 +873,7 @@ pub fn run(cli_args: CliArgs) {
         builder = builder.plugin(tauri_nspanel::init());
     }
 
-    // Single-instance forwards CLI args to an already-running Handy and exits.
+    // Single-instance forwards CLI args to an already-running Slurpy and exits.
     // That would make the headless path
     // (--transcribe-file/--list-devices/--list-models) a silent no-op whenever the
     // app is already open, so skip it in headless mode and run a standalone

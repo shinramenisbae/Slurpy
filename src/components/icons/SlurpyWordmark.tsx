@@ -2,8 +2,8 @@ import React from "react";
 
 // Slurpy wordmark: the ramen-bowl mark plus the app name. Keeps the legacy
 // component name so call sites are unchanged (this fork was renamed from
-// Handy; see README).
-const HandyTextLogo = ({
+// Slurpy; see README).
+const SlurpyWordmark = ({
   width,
   height,
   className,
@@ -51,4 +51,4 @@ const HandyTextLogo = ({
   );
 };
 
-export default HandyTextLogo;
+export default SlurpyWordmark;

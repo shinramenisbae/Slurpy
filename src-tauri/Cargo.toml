@@ -1,7 +1,7 @@
 [package]
 name = "handy"
 version = "0.9.5"
-description = "Slurpy — local speech-to-text with AI cleanup (a renamed fork of Handy)"
+description = "Slurpy — local speech-to-text with AI cleanup (a renamed fork of Slurpy)"
 authors = ["shinramenisbae", "cjpais"]
 edition = "2021"
 license = "MIT"
@@ -171,7 +171,7 @@ transcribe-cpp = { version = "0.1.3", default-features = false, features = [
 # tao #1231 (removed window subclassing), which left the thread event target's
 # WNDPROC falling through to DefSubclassProc. On a no-longer-subclassed window
 # that returns 0, so WM_QUERYENDSESSION answered FALSE and vetoed Windows
-# shutdown (Handy #1710). `handy` = 07f3742b + a cherry-pick of tao #1274
+# shutdown (Slurpy #1710). `handy` = 07f3742b + a cherry-pick of tao #1274
 # (DefSubclassProc → DefWindowProcW). Repoint at upstream once #1274 merges.
 #
 # tao-macros must be patched to the SAME rev even though nothing here depends on

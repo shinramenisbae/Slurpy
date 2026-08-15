@@ -1,4 +1,4 @@
-# Home-manager module for Handy speech-to-text
+# Home-manager module for Slurpy speech-to-text
 #
 # Provides a systemd user service for autostart.
 # Usage: imports = [ handy.homeManagerModules.default ];
@@ -14,19 +14,19 @@ let
 in
 {
   options.services.handy = {
-    enable = lib.mkEnableOption "Handy speech-to-text user service";
+    enable = lib.mkEnableOption "Slurpy speech-to-text user service";
 
     package = lib.mkOption {
       type = lib.types.package;
       defaultText = lib.literalExpression "handy.packages.\${system}.handy";
-      description = "The Handy package to use.";
+      description = "The Slurpy package to use.";
     };
   };
 
   config = lib.mkIf cfg.enable {
     systemd.user.services.handy = {
       Unit = {
-        Description = "Handy speech-to-text";
+        Description = "Slurpy speech-to-text";
         After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
       };

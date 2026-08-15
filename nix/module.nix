@@ -1,4 +1,4 @@
-# NixOS module for Handy speech-to-text
+# NixOS module for Slurpy speech-to-text
 #
 # Handles system-level configuration that the package wrapper cannot:
 #   - udev rule for /dev/uinput (rdev grab() needs it for virtual input)
@@ -26,12 +26,12 @@ let
 in
 {
   options.programs.handy = {
-    enable = lib.mkEnableOption "Handy offline speech-to-text";
+    enable = lib.mkEnableOption "Slurpy offline speech-to-text";
 
     package = lib.mkOption {
       type = lib.types.package;
       defaultText = lib.literalExpression "handy.packages.\${system}.handy";
-      description = "The Handy package to use.";
+      description = "The Slurpy package to use.";
     };
   };
 

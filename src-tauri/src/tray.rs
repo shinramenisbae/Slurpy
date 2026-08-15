@@ -191,7 +191,7 @@ fn load_tray_icon(resolved_icon_path: tauri::Result<PathBuf>) -> tauri::Result<I
     Image::from_path(&resolved_icon_path).map(Image::to_owned)
 }
 
-/// "Handy vX.Y.Z — post-processing: <Mode>". The tooltip always names the
+/// "Slurpy vX.Y.Z — post-processing: <Mode>". The tooltip always names the
 /// active post-processing mode so it is readable at a glance.
 pub fn tray_tooltip(app: &AppHandle) -> String {
     let settings = settings::get_settings(app);

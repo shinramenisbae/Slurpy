@@ -38,7 +38,7 @@ pub enum EngineType {
     Cohere,
 }
 
-/// Where a model comes from and how Handy obtains it — the routing discriminant
+/// Where a model comes from and how Slurpy obtains it — the routing discriminant
 /// for downloading and on-disk resolution.
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub enum ModelSource {
@@ -90,7 +90,7 @@ fn recognition_language(language: &str) -> &str {
     }
 }
 
-/// The base code Handy matches a language *intent* on: a tag's primary subtag,
+/// The base code Slurpy matches a language *intent* on: a tag's primary subtag,
 /// with any BCP-47 region or script suffix dropped (`en-US` → `en`, `zh-CN` →
 /// `zh`, `zh-Hant` → `zh`). Bare and three-letter codes (`haw`) pass through
 /// unchanged. Lets a bare intent (`en`) match a model that advertises full
@@ -369,7 +369,7 @@ fn local_caps(probe: &CapabilityProbe) -> LocalCaps {
     }
 }
 
-/// Bridges hf-hub's async download progress to Handy's `model-download-progress`
+/// Bridges hf-hub's async download progress to Slurpy's `model-download-progress`
 /// event. hf-hub clones the reporter, so shared state lives behind an `Arc`.
 #[derive(Clone)]
 struct HfDownloadProgress {
@@ -1197,7 +1197,7 @@ impl ModelManager {
     }
 
     /// Re-run the local discovery scans (custom models dir + shared HF cache) so
-    /// models dropped in or downloaded outside Handy show up without a restart.
+    /// models dropped in or downloaded outside Slurpy show up without a restart.
     /// The merge is additive: only new ids are inserted, so existing entries keep
     /// their values — including runtime-probed capabilities from
     /// [`Self::set_runtime_capabilities`]. It then runs [`Self::update_download_status`],
@@ -1644,7 +1644,7 @@ impl ModelManager {
 
             // Probe GGUF headers for advertised capabilities so a dropped-in
             // model surfaces streaming / translation / languages just like a
-            // Handy-downloaded one. Legacy `.bin` files have no GGUF header, so
+            // Slurpy-downloaded one. Legacy `.bin` files have no GGUF header, so
             // they stay "unknown" until transcribe-cpp reconciles them at load.
             let probe = if is_gguf {
                 GgufHeaderProber.probe_file(&path)
@@ -1690,7 +1690,7 @@ impl ModelManager {
     }
 
     /// Discover transcribe-cpp-compatible GGUF models already present in the
-    /// shared Hugging Face cache, so models downloaded by Handy (or any other
+    /// shared Hugging Face cache, so models downloaded by Slurpy (or any other
     /// tool) appear in "Your Models" without re-downloading. Only architectures
     /// transcribe-cpp recognises are surfaced; arbitrary (e.g. LLM) GGUFs that
     /// share the cache are ignored.

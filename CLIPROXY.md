@@ -1,12 +1,12 @@
 # CLIProxyAPI post-processing — setup notes
 
-Handy's `Cliproxy` post-processing mode POSTs each dictated transcript to an
+Slurpy's `Cliproxy` post-processing mode POSTs each dictated transcript to an
 Anthropic Messages-compatible endpoint (`POST {base_url}/v1/messages`) and
 pastes the returned text. It was built for a local
 [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) instance on
 `http://127.0.0.1:8317`, but any Messages-compatible endpoint works.
 
-## Handy settings (Settings → Post Process → Mode: CLIProxyAPI)
+## Slurpy settings (Settings → Post Process → Mode: CLIProxyAPI)
 
 | Setting | Notes |
 | --- | --- |

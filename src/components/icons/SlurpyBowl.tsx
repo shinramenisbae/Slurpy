@@ -1,6 +1,6 @@
-// Slurpy bowl mark (legacy component name kept from the Handy fork so call
+// Slurpy bowl mark (legacy component name kept from the Slurpy fork so call
 // sites are unchanged). Waveform steam over a ramen bowl.
-const HandyHand = ({
+const SlurpyBowl = ({
   width,
   height,
 }: {
@@ -25,4 +25,4 @@ const HandyHand = ({
   </svg>
 );
 
-export default HandyHand;
+export default SlurpyBowl;

@@ -2,38 +2,47 @@
 
 **A free, open source speech-to-text app that works offline — with optional AI cleanup of your dictations.**
 
-Slurpy is a renamed fork of [Handy](https://github.com/cjpais/Handy) by CJ Pais
-(MIT licensed — see [LICENSE](LICENSE)). It slurps up your speech and serves it
-back as clean text. On top of upstream Handy it adds a selectable
-post-processing backend: `Off` (raw paste), `Builtin` (Handy's provider
-pipeline), or `Cliproxy` (an Anthropic Messages-compatible endpoint such as a
-local [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) — see
-[CLIPROXY.md](CLIPROXY.md)), plus per-mode tray icons and a mode badge on the
-recording overlay. Slurpy is not affiliated with upstream Handy; for the
-original, visit [handy.computer](https://handy.computer).
+Slurpy is a personal fork of [Handy](https://github.com/cjpais/Handy) by CJ Pais,
+MIT licensed — see [LICENSE](LICENSE). It slurps up your speech and serves it
+back as clean text. Slurpy is not affiliated with or endorsed by upstream Handy;
+for the original app, visit [handy.computer](https://handy.computer).
+
+**What this fork adds** on top of upstream:
+
+- A selectable post-processing backend — `Off` (paste the raw transcript),
+  `Builtin` (Handy's existing multi-provider LLM pipeline), or `Cliproxy`: an
+  Anthropic Messages-compatible endpoint, typically a local
+  [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI), so dictation and
+  cleanup both stay on your machine. See [CLIPROXY.md](CLIPROXY.md).
+- A never-lose-the-transcript failure policy with a hard timeout: any provider
+  failure (timeout, non-2xx, malformed or empty response) silently pastes the
+  raw dictation instead.
+- The active mode is visible at a glance — tray tooltip, a per-mode tray icon
+  badge, and a badge on the recording overlay.
+- `--cycle-post-process-mode` plus an optional shortcut to cycle the mode.
 
 ---
 
-Original Handy README (names updated) follows:
+The rest of this README is upstream Handy's, with names updated:
 
-Handy is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud.
+Slurpy is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud.
 
-## Why Handy?
+## Why Slurpy?
 
-Handy was created to fill the gap for a truly open source, extensible speech-to-text tool. As stated on [handy.computer](https://handy.computer):
+Upstream Handy was created to fill the gap for a truly open source, extensible speech-to-text tool. As stated on [handy.computer](https://handy.computer):
 
 - **Free**: Accessibility tooling belongs in everyone's hands, not behind a paywall
-- **Open Source**: Together we can build further. Extend Handy for yourself and contribute to something bigger
+- **Open Source**: Together we can build further. Extend it for yourself and contribute to something bigger
 - **Private**: Your voice stays on your computer. Get transcriptions without sending audio to the cloud
 - **Simple**: One tool, one job. Transcribe what you say and put it into a text box
 
-Handy isn't trying to be the best speech-to-text app—it's trying to be the most forkable one.
+Handy isn't trying to be the best speech-to-text app—it's trying to be the most forkable one. Slurpy is one of those forks.
 
 ## How It Works
 
 1. **Press** a configurable keyboard shortcut to start/stop recording (or use push-to-talk mode)
 2. **Speak** your words while the shortcut is active
-3. **Release** and Handy processes your speech using Whisper
+3. **Release** and Slurpy processes your speech using Whisper
 4. **Get** your transcribed text pasted directly into whatever app you're using
 
 The process is entirely local:
@@ -48,14 +57,27 @@ The process is entirely local:
 
 ### Installation
 
-1. Download the latest release from the [releases page](https://github.com/cjpais/Handy/releases) or the [website](https://handy.computer)
-   - **macOS**: Also available via [Homebrew cask](https://formulae.brew.sh/cask/handy): `brew install --cask handy`
-   - **Windows**: Also available via [winget](https://github.com/microsoft/winget-pkgs): `winget install cjpais.Handy` \
-     **Note:** The Homebrew cask and winget package are not maintained by the Handy developers.
-2. Install the application
-3. Launch Handy and grant necessary system permissions (microphone, accessibility)
-4. Configure your preferred keyboard shortcuts in Settings
+Slurpy publishes no prebuilt releases — build it yourself:
+
+1. Follow [BUILD.md](BUILD.md) for platform prerequisites, then:
+
+   ```bash
+   bun install
+   bun run tauri build
+   ```
+
+   The installer lands in `src-tauri/target/release/bundle/`. Builds are
+   unsigned, so Windows SmartScreen and macOS Gatekeeper will warn on first run.
+
+2. Install it, then launch Slurpy and grant the system permissions it asks for
+   (microphone, and accessibility on macOS)
+3. Pick a transcription model on first run
+4. Configure your keyboard shortcuts in Settings
 5. Start transcribing!
+
+> Prebuilt binaries, a Homebrew cask, and a winget package exist for **upstream
+> Handy**, not for Slurpy — see [handy.computer](https://handy.computer) if you
+> want the original app without building anything.
 
 ### Development Setup
 
@@ -63,15 +85,15 @@ For detailed build instructions including platform-specific requirements, see [B
 
 ## Integrations
 
-<a href="https://www.raycast.com/mattiacolombomc/handy" title="Install Handy Raycast Extension"><img src="https://www.raycast.com/mattiacolombomc/handy/install_button@2x.png?v=1.1" height="64" style="height: 64px;" alt="Install handy Raycast Extension" /></a>
-
-Control Handy from [Raycast](https://www.raycast.com) — start/stop recording, browse transcript history, manage dictionary, switch models and languages.
-
-[Source](https://github.com/mattiacolombomc/raycast-handy) · by [@mattiacolombomc](https://github.com/mattiacolombomc)
+A community [Raycast extension](https://www.raycast.com/mattiacolombomc/handy)
+by [@mattiacolombomc](https://github.com/mattiacolombomc) controls **upstream
+Handy** — start/stop recording, browse transcript history, manage dictionary,
+switch models and languages. It targets the Handy app bundle, so it is untested
+against Slurpy's renamed bundle.
 
 ## Architecture
 
-Handy is built as a Tauri application combining:
+Slurpy is built as a Tauri application combining:
 
 - **Frontend**: React + TypeScript with Tailwind CSS for the settings UI
 - **Backend**: Rust for system integration, audio processing, and ML inference
@@ -85,22 +107,26 @@ Handy is built as a Tauri application combining:
 
 ### Debug Mode
 
-Handy includes an advanced debug mode for development and troubleshooting. Access it by pressing:
+Slurpy includes an advanced debug mode for development and troubleshooting. Access it by pressing:
 
 - **macOS**: `Cmd+Shift+D`
 - **Windows/Linux**: `Ctrl+Shift+D`
 
 ### CLI Parameters
 
-Handy supports command-line flags for controlling a running instance and customizing startup behavior. These work on all platforms (macOS, Windows, Linux).
+Slurpy supports command-line flags for controlling a running instance and customizing startup behavior. These work on all platforms (macOS, Windows, Linux).
 
 **Remote control flags** (sent to an already-running instance via the single-instance plugin):
 
 ```bash
-handy --toggle-transcription    # Toggle recording on/off
-handy --toggle-post-process     # Toggle recording with post-processing on/off
-handy --cancel                  # Cancel the current operation
+handy --toggle-transcription      # Toggle recording on/off
+handy --toggle-post-process       # Toggle recording with post-processing on/off
+handy --cycle-post-process-mode   # Cycle post-processing: Off -> Builtin -> Cliproxy
+handy --cancel                    # Cancel the current operation
 ```
+
+> The binary is still named `handy` (the crate name is unchanged so tooling and
+> scripts keep working), even though the app is Slurpy.
 
 **Startup flags:**
 
@@ -117,15 +143,18 @@ Flags can be combined for autostart scenarios:
 handy --start-hidden --no-tray
 ```
 
-> **macOS tip:** When Handy is installed as an app bundle, invoke the binary directly:
+> **macOS tip:** When Slurpy is installed as an app bundle, invoke the binary directly:
 >
 > ```bash
-> /Applications/Handy.app/Contents/MacOS/Handy --toggle-transcription
+> /Applications/Slurpy.app/Contents/MacOS/Slurpy --toggle-transcription
 > ```
 
 ## Known Issues & Current Limitations
 
-This project is actively being developed and has some [known issues](https://github.com/cjpais/Handy/issues). We believe in transparency about the current state:
+Slurpy inherits upstream Handy's known issues. Fork-specific problems belong in
+[this repo's issues](https://github.com/shinramenisbae/Slurpy/issues); for the
+engine itself, upstream's [issue tracker](https://github.com/cjpais/Handy/issues)
+is usually the better reference. Being transparent about the current state:
 
 ### Major Issues (Help Wanted)
 
@@ -157,12 +186,12 @@ For reliable text input on Linux, install the appropriate tool for your display 
 - **Wayland**: Install `wtype` (preferred) or `dotool` for text input to work correctly
 - **dotool setup**: Requires adding your user to the `input` group: `sudo usermod -aG input $USER` (then log out and back in)
 
-Without these tools, Handy falls back to enigo which may have limited compatibility, especially on Wayland.
+Without these tools, Slurpy falls back to enigo which may have limited compatibility, especially on Wayland.
 
 **Other Notes:**
 
 - **Runtime library dependency (`libgtk-layer-shell.so.0`)**:
-  - Handy links `gtk-layer-shell` on Linux. If startup fails with `error while loading shared libraries: libgtk-layer-shell.so.0`, install the runtime package for your distro:
+  - Slurpy links `gtk-layer-shell` on Linux. If startup fails with `error while loading shared libraries: libgtk-layer-shell.so.0`, install the runtime package for your distro:
 
     | Distro        | Package to install    | Example command                        |
     | ------------- | --------------------- | -------------------------------------- |
@@ -172,22 +201,22 @@ Without these tools, Handy falls back to enigo which may have limited compatibil
 
   - For building from source on Ubuntu/Debian, you may also need `libgtk-layer-shell-dev`.
 
-- The recording overlay is disabled by default on Linux (`Overlay Position: None`) because certain compositors treat it as the active window. When the overlay is visible it can steal focus, which prevents Handy from pasting back into the application that triggered transcription. If you enable the overlay anyway, be aware that clipboard-based pasting might fail or end up in the wrong window.
+- The recording overlay is disabled by default on Linux (`Overlay Position: None`) because certain compositors treat it as the active window. When the overlay is visible it can steal focus, which prevents Slurpy from pasting back into the application that triggered transcription. If you enable the overlay anyway, be aware that clipboard-based pasting might fail or end up in the wrong window.
 - If you are having trouble with the app, running with the environment variable `WEBKIT_DISABLE_DMABUF_RENDERER=1` may help
-- If Handy fails to start reliably on Linux, see [Troubleshooting → Linux Startup Crashes or Instability](#linux-startup-crashes-or-instability).
+- If Slurpy fails to start reliably on Linux, see [Troubleshooting → Linux Startup Crashes or Instability](#linux-startup-crashes-or-instability).
 - **Global keyboard shortcuts (Wayland):** On Wayland, system-level shortcuts must be configured through your desktop environment or window manager. Use the [CLI flags](#cli-parameters) as the command for your custom shortcut.
 
   **GNOME:**
   1. Open **Settings > Keyboard > Keyboard Shortcuts > Custom Shortcuts**
   2. Click the **+** button to add a new shortcut
-  3. Set the **Name** to `Toggle Handy Transcription`
+  3. Set the **Name** to `Toggle Slurpy Transcription`
   4. Set the **Command** to `handy --toggle-transcription`
   5. Click **Set Shortcut** and press your desired key combination (e.g., `Super+O`)
 
   **KDE Plasma:**
   1. Open **System Settings > Shortcuts > Custom Shortcuts**
   2. Click **Edit > New > Global Shortcut > Command/URL**
-  3. Name it `Toggle Handy Transcription`
+  3. Name it `Toggle Slurpy Transcription`
   4. In the **Trigger** tab, set your desired key combination
   5. In the **Action** tab, set the command to `handy --toggle-transcription`
 
@@ -207,7 +236,7 @@ Without these tools, Handy falls back to enigo which may have limited compatibil
   bind = $mainMod, O, exec, handy --toggle-transcription
   ```
 
-- You can also trigger Handy externally via Unix signals or the CLI flags, which lets Wayland window managers or other hotkey daemons keep ownership of keybindings:
+- You can also trigger Slurpy externally via Unix signals or the CLI flags, which lets Wayland window managers or other hotkey daemons keep ownership of keybindings:
 
   | Action                                    | Trigger                                                  |
   | ----------------------------------------- | -------------------------------------------------------- |
@@ -223,7 +252,7 @@ Without these tools, Handy falls back to enigo which may have limited compatibil
 
   `pkill` here simply delivers the signal—it does not terminate the process.
 
-  > **Behavior change:** older releases also accepted `SIGUSR1` for toggling transcription with post-processing. WebKitGTK — the webview engine embedded in Handy on Linux — uses SIGUSR1 internally to coordinate JavaScript garbage collection, so listening for it caused phantom recordings and interrupted dictations every few minutes ([#1660](https://github.com/cjpais/Handy/issues/1660)). Handy no longer listens for SIGUSR1 on Linux; the post-processing toggle is still available via `handy --toggle-post-process`. **Remove any `pkill -USR1` bindings**: the signal is now delivered straight to WebKit's internal handler and can crash the app.
+  > **Behavior change:** older releases also accepted `SIGUSR1` for toggling transcription with post-processing. WebKitGTK — the webview engine embedded in Slurpy on Linux — uses SIGUSR1 internally to coordinate JavaScript garbage collection, so listening for it caused phantom recordings and interrupted dictations every few minutes ([#1660](https://github.com/cjpais/Handy/issues/1660)). Slurpy no longer listens for SIGUSR1 on Linux; the post-processing toggle is still available via `handy --toggle-post-process`. **Remove any `pkill -USR1` bindings**: the signal is now delivered straight to WebKit's internal handler and can crash the app.
 
 **Overlay & Pasting Issues (Linux):**
 
@@ -240,7 +269,7 @@ Without these tools, Handy falls back to enigo which may have limited compatibil
 
 ### System Requirements/Recommendations
 
-The following are recommendations for running Handy on your own machine. If you don't meet the system requirements, the performance of the application may be degraded. We are working on improving the performance across all kinds of computers and hardware.
+The following are recommendations for running Slurpy on your own machine. If you don't meet the system requirements, the performance of the application may be degraded. We are working on improving the performance across all kinds of computers and hardware.
 
 **For Whisper Models:**
 
@@ -273,7 +302,7 @@ We're actively working on several features and improvements. Contributions and f
 
 **Opt-in Analytics:**
 
-- Collect anonymous usage data to help improve Handy
+- Collect anonymous usage data to help improve Slurpy
 - Privacy-first approach with clear opt-in
 
 **Settings Refactoring:**
@@ -288,13 +317,13 @@ We're actively working on several features and improvements. Contributions and f
 
 ## Verify Release Signatures
 
-Handy release artifacts are signed with Tauri's updater signature format. The public key is stored in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json) under `plugins.updater.pubkey`.
+Slurpy release artifacts are signed with Tauri's updater signature format. The public key is stored in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json) under `plugins.updater.pubkey`.
 
 To verify a release manually, set `ARTIFACT` to the filename you downloaded, save the `pubkey` value from `src-tauri/tauri.conf.json` to `handy.pub.b64`, then decode the public key and matching `.sig` file from base64 and verify the artifact with `minisign`:
 
 ```bash
 # Replace with the file you downloaded
-ARTIFACT="Handy_0.8.1_amd64.AppImage"
+ARTIFACT="Slurpy_0.8.1_amd64.AppImage"
 
 python3 - "$ARTIFACT" <<'PY'
 import base64, pathlib, sys
@@ -325,11 +354,11 @@ Do not use `gpg` for these `.sig` files.
 
 ### Manual Model Installation (For Proxy Users or Network Restrictions)
 
-If you're behind a proxy, firewall, or in a restricted network environment where Handy cannot download models automatically, you can manually download and install them. The URLs are publicly accessible from any browser.
+If you're behind a proxy, firewall, or in a restricted network environment where Slurpy cannot download models automatically, you can manually download and install them. The URLs are publicly accessible from any browser.
 
 #### Step 1: Find Your App Data Directory
 
-1. Open Handy settings
+1. Open Slurpy settings
 2. Navigate to the **About** section
 3. Copy the "App Data Directory" path shown there, or use the shortcuts:
    - **macOS**: `Cmd+Shift+D` to open debug menu
@@ -389,7 +418,7 @@ Simply place the `.bin` file directly into the `models` directory:
 
 **For GGUF Models (.gguf files):**
 
-Place the `.gguf` file directly into the `models` directory, exactly like the Whisper `.bin` files above. Handy also picks up models already present in the shared Hugging Face cache (`~/.cache/huggingface/hub`), so a copy downloaded by another tool works without being moved.
+Place the `.gguf` file directly into the `models` directory, exactly like the Whisper `.bin` files above. Slurpy also picks up models already present in the shared Hugging Face cache (`~/.cache/huggingface/hub`), so a copy downloaded by another tool works without being moved.
 
 **For Parakeet Models (.tar.gz archives):**
 
@@ -415,24 +444,24 @@ Final structure should look like:
 
 - For Parakeet models, the extracted directory name **must** match exactly as shown above
 - Do not rename the `.bin` or `.gguf` files—use the exact filenames from the download URLs
-- After placing the files, restart Handy to detect the new models
+- After placing the files, restart Slurpy to detect the new models
 
 #### Step 5: Verify Installation
 
-1. Restart Handy
+1. Restart Slurpy
 2. Open Settings → Models
 3. Your manually installed models should now appear as "Downloaded"
 4. Select the model you want to use and test transcription
 
 ### Custom Whisper Models
 
-Handy can auto-discover custom Whisper GGML models placed in the `models` directory. This is useful for users who want to use fine-tuned or community models not included in the default model list.
+Slurpy can auto-discover custom Whisper GGML models placed in the `models` directory. This is useful for users who want to use fine-tuned or community models not included in the default model list.
 
 **How to use:**
 
 1. Obtain a Whisper model in GGML `.bin` format (e.g., from [Hugging Face](https://huggingface.co/models?search=whisper%20ggml))
 2. Place the `.bin` file in your `models` directory (see paths above)
-3. Restart Handy to discover the new model
+3. Restart Slurpy to discover the new model
 4. The model will appear in the "Custom Models" section of the Models settings page
 
 **Important:**
@@ -443,11 +472,11 @@ Handy can auto-discover custom Whisper GGML models placed in the `models` direct
 
 ### Linux Startup Crashes or Instability
 
-If Handy fails to start reliably on Linux — for example, it crashes shortly after launch, never shows its window, or reports a Wayland protocol error — try the steps below in order.
+If Slurpy fails to start reliably on Linux — for example, it crashes shortly after launch, never shows its window, or reports a Wayland protocol error — try the steps below in order.
 
 **1. Install (or reinstall) `gtk-layer-shell`**
 
-Handy uses `gtk-layer-shell` for its recording overlay and links against it at runtime. A missing or broken installation is the most common cause of startup failures and can manifest as a crash or a hang well before any window is shown. Make sure the runtime package is installed for your distro:
+Slurpy uses `gtk-layer-shell` for its recording overlay and links against it at runtime. A missing or broken installation is the most common cause of startup failures and can manifest as a crash or a hang well before any window is shown. Make sure the runtime package is installed for your distro:
 
 | Distro        | Package to install    | Example command                        |
 | ------------- | --------------------- | -------------------------------------- |
@@ -475,7 +504,7 @@ WEBKIT_DISABLE_DMABUF_RENDERER=1 handy
 
 **Making a workaround permanent**
 
-Once you've found a flag that helps, export it from your shell profile (`~/.bashrc`, `~/.zshenv`, …) or from the desktop autostart entry that launches Handy. If you launch Handy from a `.desktop` file, you can prefix the `Exec=` line, e.g.:
+Once you've found a flag that helps, export it from your shell profile (`~/.bashrc`, `~/.zshenv`, …) or from the desktop autostart entry that launches Slurpy. If you launch Slurpy from a `.desktop` file, you can prefix the `Exec=` line, e.g.:
 
 ```ini
 Exec=env HANDY_NO_GTK_LAYER_SHELL=1 handy
@@ -483,9 +512,9 @@ Exec=env HANDY_NO_GTK_LAYER_SHELL=1 handy
 
 If a workaround helps you, please [open an issue](https://github.com/cjpais/Handy/issues) describing your distro, desktop environment, and session type — that information helps us narrow down the underlying bug.
 
-### Handy Starts or Stops Recording on Its Own (Linux)
+### Slurpy Starts or Stops Recording on Its Own (Linux)
 
-Handy 0.9.4 and earlier listened for `SIGUSR1` as a remote-control trigger. WebKitGTK — the webview engine embedded in Handy on Linux — uses that same signal internally to coordinate JavaScript garbage collection, so GC cycles were misread as hotkey presses: recordings started on their own, or real dictations were cut off mid-sentence (typically ~2 minutes in). See [#1660](https://github.com/cjpais/Handy/issues/1660).
+Slurpy 0.9.4 and earlier listened for `SIGUSR1` as a remote-control trigger. WebKitGTK — the webview engine embedded in Slurpy on Linux — uses that same signal internally to coordinate JavaScript garbage collection, so GC cycles were misread as hotkey presses: recordings started on their own, or real dictations were cut off mid-sentence (typically ~2 minutes in). See [#1660](https://github.com/cjpais/Handy/issues/1660).
 
 Update to a newer release, and replace any `pkill -USR1 -n handy` keybindings with `handy --toggle-post-process`.
 
@@ -502,7 +531,7 @@ The goal is to create both a useful tool and a foundation for others to build up
 ## Sponsors
 
 <div align="center">
-  We're grateful for the support of our sponsors who help make Handy possible:
+  We're grateful for the support of our sponsors who help make Slurpy possible:
   <br><br>
   <a href="https://wordcab.com">
     <img src="sponsor-images/wordcab.png" alt="Wordcab" width="120" height="120">
@@ -519,14 +548,14 @@ The goal is to create both a useful tool and a foundation for others to build up
 
 ## Related Projects
 
-- **[Handy CLI](https://github.com/cjpais/handy-cli)** - The original Python command-line version
+- **[Slurpy CLI](https://github.com/cjpais/handy-cli)** - The original Python command-line version
 - **[handy.computer](https://handy.computer)** - Project website with demos and documentation
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-Handy is open-source software, but the Handy name, logo, icon, and brand assets are not open-source. Unofficial forks, rewrites, and redistributions must use their own branding and must not imply endorsement or affiliation.
+Slurpy is open-source software, but the Slurpy name, logo, icon, and brand assets are not open-source. Unofficial forks, rewrites, and redistributions must use their own branding and must not imply endorsement or affiliation.
 
 ## Acknowledgments
 
@@ -534,4 +563,4 @@ Handy is open-source software, but the Handy name, logo, icon, and brand assets 
 - **ggml and transcribe.cpp** for amazing cross-platform speech-to-text inference/acceleration
 - **Silero** for great lightweight VAD
 - **Tauri** team for the excellent Rust-based app framework
-- **Community contributors** helping make Handy better
+- **Community contributors** helping make Slurpy better
